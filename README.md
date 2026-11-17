@@ -9,6 +9,7 @@ lets Claude work on the masked text, then restores the originals on your machine
 
 [![tests](https://github.com/min-1225/veil-skill/actions/workflows/test.yml/badge.svg)](https://github.com/min-1225/veil-skill/actions/workflows/test.yml)
 ![runs locally](https://img.shields.io/badge/runs-100%25%20locally-2ea44f)
+[![MIT license](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 ![Claude Code skill](https://img.shields.io/badge/Claude%20Code-skill-D97757)
 ![Node 18+](https://img.shields.io/badge/node-%E2%89%A518-339933?logo=node.js&logoColor=white)
 ![zero dependencies](https://img.shields.io/badge/core-zero%20dependencies-blue)
@@ -162,3 +163,7 @@ node veil/scripts/selftest.mjs --ner    # + real NER model
 ## Credits
 
 Veil grew out of **VeilNote**, a privacy-preserving meeting agent built by team TRACEGATE at the CodeGate 2026 AI startup hackathon ([team repo](https://github.com/TRACEGATE/hackathon_2026), [portfolio mirror](https://github.com/min-1225/Hackathon-CodeGate-2026)). The detection and tokenizer engine started there and was extended for this skill.
+
+## License
+
+[MIT](LICENSE). Free to use, modify and share, including commercially.
