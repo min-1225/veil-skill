@@ -264,7 +264,7 @@ test('유출 검사: 대응표 원문과 고위험 패턴 잔존을 잡는다', 
 
 // 표 기반 테스트 묶음 (tests/*.mjs) — 언어별 탐지, 비밀 정보, 오탐 방지, 토큰화, 명령줄 도구, 단위 함수
 const section = (name) => console.log(name);
-for (const suite of ['ko', 'intl', 'secrets', 'structured', 'negatives', 'tokens', 'cli', 'units']) {
+for (const suite of ['ko', 'intl', 'secrets', 'structured', 'bench-regress', 'negatives', 'tokens', 'cli', 'units']) {
   const mod = await import(`./tests/${suite}.mjs`);
   await mod.default({ test, section });
 }

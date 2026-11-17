@@ -11,6 +11,8 @@ const PERSON_KEYS_SPECIFIC = new Set([
   '이름', '성명', '성함', '고객명', '담당자명', '대표자', '대표자명', '직원명', '사원명', '회원명', '환자명',
   '학생명', '보호자', '보호자명', '수신자', '발신자', '신청자', '예약자', '참석자', '작성자', '보고자', '담당자',
   '실명', '한글이름', '영문이름', '성명한글', '성명영문',
+  '수령인', '수취인', '접속자', '내담자', '예금주', '여행자', '책임자', '결제자', '출장자', '의뢰인', '계약자',
+  '가입자', '피보험자', '구매자', '주문자', '상담사', '진행자', '이용자명', '사용자명',
   'fullname', 'firstname', 'lastname', 'givenname', 'familyname', 'surname', 'customername', 'clientname',
   'contactname', 'employeename', 'patientname', 'studentname', 'recipientname', 'sendername', 'personname',
   'realname', 'legalname', 'displayname',
@@ -32,6 +34,27 @@ const ADDRESS_KEYS = new Set([
   'address', 'addr', 'streetaddress', 'street', 'shippingaddress', 'billingaddress', 'homeaddress', 'mailingaddress',
 ]);
 
+// 번호·비밀값 열 — 값 형식이 제각각이라 열 이름이 가장 확실한 단서다
+const VALUE_KEYS = {
+  EMPLOYEE_ID: [
+    '사번', '사원번호', '직원번호', '고객번호', '회원번호', '회원id', '회원아이디', '상담번호', '사례번호', '사례id',
+    '접수번호', '환자번호', '학번', '예약번호', 'employeeid', 'empid', 'staffid', 'customerid', 'clientid',
+    'memberid', 'caseid', 'patientid', 'studentid', 'customerno', 'memberno',
+  ],
+  ACCOUNT: ['계좌', '계좌번호', '입금계좌', '환급계좌', '출금계좌', 'accountnumber', 'accountno', 'bankaccount', 'iban'],
+  AMOUNT: [
+    '금액', '계약금', '견적', '견적가', '견적금액', '환급액', '환급금', '결제액', '결제금액', '잔액', '연봉', '급여',
+    '보증금', '정산액', '청구액', 'amount', 'salary',
+  ],
+  SECRET: [
+    '비밀번호', '암호', '패스워드', '토큰', '임시토큰', '인증토큰', 'api키', 'apikey', 'token', 'password', 'passwd',
+    'secret', 'accesstoken', 'apitoken',
+  ],
+  PASSPORT: ['여권번호', '여권', 'passport', 'passportno', 'passportnumber'],
+  RRN: ['주민번호', '주민등록번호', '외국인등록번호'],
+};
+const VALUE_KEY_TYPE = new Map(Object.entries(VALUE_KEYS).flatMap(([type, keys]) => keys.map((k) => [k, type])));
+
 function keyInfo(raw) {
   const k = norm(raw);
   if (!k) return null;
@@ -39,7 +62,24 @@ function keyInfo(raw) {
   if (PERSON_KEYS_GENERIC.has(k)) return { type: 'PERSON', generic: true };
   if (ORG_KEYS.has(k)) return { type: 'ORG' };
   if (ADDRESS_KEYS.has(k)) return { type: 'ADDRESS' };
+  if (VALUE_KEY_TYPE.has(k)) return { type: VALUE_KEY_TYPE.get(k) };
   return null;
+}
+
+/** 번호·비밀값 열의 값이 그 종류로 쓸 만한가 */
+function plausibleValue(type, v) {
+  if (v.length > 100) return false;
+  const digits = (v.match(/\d/g) || []).length;
+  switch (type) {
+    case 'EMPLOYEE_ID': return digits >= 2 && !/\s/.test(v);
+    case 'ACCOUNT': return digits >= 8;
+    // 통화 표시나 천 단위 쉼표가 있거나 큰 숫자일 때만 (amount 열의 "100" 같은 일반 수치는 남긴다)
+    case 'AMOUNT': return digits >= 1 && (/[원$€£¥₩]|달러|만|억|,\d{3}/.test(v) || digits >= 5);
+    case 'SECRET': return v.length >= 4 && !/\s/.test(v);
+    case 'PASSPORT': return digits >= 6 && v.length <= 12;
+    case 'RRN': return digits === 13;
+    default: return true;
+  }
 }
 
 const PLACEHOLDER = /^(?:-+|—+|n\/?a|null|none|nil|tbd|tba|unknown|undefined|\?+|x+|없음|미정|미기재|해당\s?없음|비공개|공석|모름|미상|익명)$/i;
@@ -83,7 +123,9 @@ function cellDetection(text, s, e, info) {
   }
   if (type === 'ORG' && (value.length > 60 || /^[\d\s.,-]+$/.test(value) || /[@/\\]/.test(value))) return null;
   if (type === 'ADDRESS' && (value.length < 4 || value.length > 150)) return null;
-  const confidence = type === 'PERSON' ? 0.86 : type === 'ORG' ? 0.87 : 0.82;
+  if (VALUE_KEYS[type] && !plausibleValue(type, value)) return null;
+  // 번호류는 형식 규칙(전화 0.9, 이메일 0.98)보다 낮고, 금액·계좌 규칙(0.8, 0.6)보다는 높게 둔다
+  const confidence = type === 'PERSON' ? 0.86 : type === 'ORG' ? 0.87 : VALUE_KEYS[type] ? 0.85 : 0.82;
   return { type, value, start: s, end: e, source: 'structured', confidence };
 }
 
@@ -108,7 +150,29 @@ function splitCells(line, delim) {
   return cells;
 }
 
-const isMdSeparator = (line) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+/**
+ * 따옴표 없이 쓴 금액의 천 단위 쉼표 때문에 칸이 늘어난 CSV 줄을 되돌린다.
+ *   업체,담당자,견적  /  다온,김민수,18,700,000원  → "18" "700" "000원" 을 한 칸으로 합친다
+ * 합쳐서 머리줄과 칸 수가 같아질 때만 받아들인다.
+ */
+function mergeThousands(line, cells, target) {
+  const out = cells.map((c) => [...c]);
+  const txt = ([s, e]) => line.slice(s, e).trim();
+  let changed = true;
+  while (out.length > target && changed) {
+    changed = false;
+    for (let i = 0; i + 1 < out.length; i++) {
+      if (/^[-+$₩]?\d{1,3}(?:,\d{3})*$/.test(txt(out[i])) && /^\d{3}(?:\D.*)?$/.test(txt(out[i + 1]))) {
+        out.splice(i, 2, [out[i][0], out[i + 1][1]]);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return out.length === target ? out : cells;
+}
+
+const isMdSeparator =(line) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
 
 function linesOf(text) {
   const out = [];
@@ -137,7 +201,8 @@ function detectTables(text, lines) {
         const row = lines[j];
         if (!row.line.trim()) break;
         if (delim === '|' && isMdSeparator(row.line)) continue;
-        const cells = splitCells(row.line, delim);
+        let cells = splitCells(row.line, delim);
+        if (cells.length > header.length && delim === ',') cells = mergeThousands(row.line, cells, header.length);
         if (cells.length !== header.length) break;
         cells.forEach(([s, e], k) => {
           if (!infos[k]) return;

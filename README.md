@@ -176,7 +176,7 @@ It depends on what is being detected.
 - **Names and companies** rely on cues. In prose: titles, particles and self-introductions (`김철수 팀장`, `저는 김민수이고`). In CSV, tables and JSON: column names and keys (`이름`, `담당자`, `name`, `customer`). Names with no cue (`민수가 그러는데`), romanized Korean names in prose (`Kim Minsu sent…`) and unfamiliar company names can be missed.
 - Once a value is found, every later mention is masked too, and the leak check confirms no original value or high-risk pattern survived. It cannot catch values that were never detected in the first place.
 
-**There are no accuracy numbers yet.** The 221 self-tests are regression tests that keep features from breaking; precision and recall have not been measured on an independent dataset that the rules were not written against. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
+**There are no accuracy numbers yet.** The 242 self-tests are regression tests that keep features from breaking; precision and recall have not been measured on an independent dataset that the rules were not written against. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
 
 **Where is the token map?**
 Next to your file as `*.veilmap.json`. It contains the originals, so don't share or commit it. This repo's `.gitignore` already excludes it.
@@ -187,7 +187,7 @@ No. Transformers.js runs the model locally. The only network access is the one-t
 ## Tests
 
 ```bash
-node veil/scripts/selftest.mjs          # 221 tests: detection in 4 languages, secrets, tables/data, false positives, round trips, CLI
+node veil/scripts/selftest.mjs          # 242 tests: detection in 4 languages, secrets, tables/data, false positives, round trips, CLI
 node veil/scripts/selftest.mjs -q       # print failures only
 node veil/scripts/selftest.mjs --ner    # + real NER model
 ```

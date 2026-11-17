@@ -40,8 +40,13 @@ export const CREDENTIAL_URL_FRAGMENT = /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s\/@:\[\
 // ── 앞에 붙는 말로 찾는 것 ──
 const SEP = '\\s*(?:[:=：]|은|는|이|가|을|를)?\\s*["\'`]?';
 const PASSWORD_KEYS = '(?<![A-Za-z])(?:password|passwd|passcode|passphrase|pwd|PW|pw)(?![A-Za-z])|비밀번호|비번|패스워드|암호';
-const SECRET_KEYS = '(?<![A-Za-z])(?:api[_\\s-]?key|apikey|secret(?:[_\\s-]?key)?|client[_\\s-]?secret|access[_\\s-]?(?:key|token)|auth[_\\s-]?token|token|bearer)(?![A-Za-z])|(?:API\\s?)?키|토큰|시크릿';
-const EMPLOYEE_KEYS = '사번|사원\\s?번호|직원\\s?번호|(?<![A-Za-z])(?:employee\\s?(?:id|no\\.?|number|#)|emp\\.?\\s?id|staff\\s?id)(?![A-Za-z])';
+const SECRET_KEYS = '(?<![A-Za-z])(?:api[_\\s-]?key|apikey|secret(?:[_\\s-]?key)?|client[_\\s-]?secret|access[_\\s-]?(?:key|token)|auth[_\\s-]?token|token|bearer)(?![A-Za-z])|(?:API\\s?)?키|토큰|시크릿|비밀\\s?값|서명\\s?키|암호\\s?키';
+// 사람·사례에 붙는 식별번호 (주문·티켓·송장 번호처럼 업무용 번호는 제외)
+const EMPLOYEE_KEYS = [
+  '사번', '사원\\s?번호', '직원\\s?번호', '고객\\s?번호', '회원\\s?(?:번호|ID|아이디)', '상담\\s?번호', '사례\\s?(?:번호|ID)',
+  '접수\\s?번호', '환자\\s?번호', '학번', '예약\\s?(?:확인\\s?)?번호', '내담자\\s?번호',
+  '(?<![A-Za-z])(?:employee|emp\\.?|staff|customer|client|member|case|patient|student)\\s?(?:id|no\\.?|number|#)(?![A-Za-z])',
+].join('|');
 
 // "password reset", "password policy" 처럼 비밀번호 값이 아니라 문장인 경우
 const PASSWORD_PROSE = new Set([
@@ -103,8 +108,10 @@ export function detectSecrets(text) {
   }
 
   // 사번: "사번은 EMP-20431입니다", "Employee ID: 004512"
-  const emp = new RegExp(`(?:${EMPLOYEE_KEYS})${SEP}([A-Za-z]{0,4}[-_]?\\d{3,10})(?![A-Za-z0-9])`, 'gi');
+  // 영문·숫자 덩어리를 하이픈·밑줄로 최대 5개까지 이은 형태 (EMP-TEST-005, RSV-2026-118, 004512), 숫자 2개 이상 필수
+  const emp = new RegExp(`(?:${EMPLOYEE_KEYS})${SEP}([A-Za-z0-9]{1,12}(?:[-_][A-Za-z0-9]{1,12}){0,4})(?![A-Za-z0-9-])`, 'gi');
   while ((m = emp.exec(text)) !== null) {
+    if ((m[1].match(/\d/g) || []).length < 2) continue;
     const start = m.index + m[0].length - m[1].length;
     out.push(det('EMPLOYEE_ID', start, start + m[1].length, text, 'employee-id', 0.95));
   }
