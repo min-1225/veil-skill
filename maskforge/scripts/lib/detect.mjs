@@ -1,4 +1,4 @@
-// VeilNote 탐지 엔진 — 규칙(정규식) + 사전 + 한국어 휴리스틱(회사명·인명)
+// MaskForge 탐지 엔진 — 규칙(정규식) + 사전 + 언어별 휴리스틱 (VeilNote 엔진 기반)
 //
 // 원본: min-1225/Hackathon-CodeGate-2026
 //   backend/src/shared/detector.js  (주민번호·카드·이메일·전화·금액·날짜)

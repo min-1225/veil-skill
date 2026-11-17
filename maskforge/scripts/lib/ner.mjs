@@ -1,7 +1,7 @@
 // 선택 기능: 로컬 NER(개체명 인식) 모델로 사람·회사·지명을 찾는다.
 //
 // - 모델은 내 컴퓨터에서만 돈다. 처음 한 번 Hugging Face 에서 모델 파일을 내려받을 뿐,
-//   문서 내용은 어디로도 보내지 않는다. 받은 모델은 ~/.cache/veilnote-models 에 캐시된다.
+//   문서 내용은 어디로도 보내지 않는다. 받은 모델은 ~/.cache/maskforge-models 에 캐시된다.
 // - 필요한 패키지: @huggingface/transformers (scripts 폴더에서 `npm install`)
 // - 기본 모델: Xenova/bert-base-multilingual-cased-ner-hrl
 //   지원 언어: 영어·독일어·스페인어·프랑스어·이탈리아어·라트비아어·네덜란드어·포르투갈어·아랍어·중국어
@@ -108,7 +108,7 @@ let cachedModel = null;
  */
 export async function runNer(text, { model = DEFAULT_NER_MODEL, minScore = 0.6, onProgress } = {}) {
   const { pipeline, env } = await loadTransformers();
-  env.cacheDir = path.join(os.homedir(), '.cache', 'veilnote-models');
+  env.cacheDir = path.join(os.homedir(), '.cache', 'maskforge-models');
   if (!cachedPipe || cachedModel !== model) {
     onProgress?.(`NER 모델 준비 중: ${model} (처음 한 번은 내려받느라 시간이 걸립니다)`);
     cachedPipe = await pipeline('token-classification', model, { dtype: 'q8' });

@@ -1,4 +1,4 @@
-# veilnote-skill
+# MaskForge
 
 글 속 민감정보를 `[PERSON_1]`, `[ORG_1]` 같은 토큰으로 가리고, 작업이 끝나면 원문으로 되돌리는 Claude Code 스킬입니다.
 
@@ -23,18 +23,18 @@ Claude Code에서 이렇게 말하면 스킬이 동작합니다.
 ## 설치
 
 ```bash
-npx skills add min-1225/veilnote-skill
+npx skills add min-1225/maskforge-skill
 ```
 
 또는 직접 복사:
 
 ```bash
-git clone https://github.com/min-1225/veilnote-skill.git
-cp -r veilnote-skill/veilnote ~/.claude/skills/
+git clone https://github.com/min-1225/maskforge-skill.git
+cp -r maskforge-skill/maskforge ~/.claude/skills/
 ```
 
 Node.js 18 이상이 필요합니다. 기본 기능은 외부 패키지를 쓰지 않습니다.
-선택 기능인 NER 모드(`--ner`)를 쓰려면 `veilnote/scripts` 폴더에서 `npm install`을 한 번 실행하세요.
+선택 기능인 NER 모드(`--ner`)를 쓰려면 `maskforge/scripts` 폴더에서 `npm install`을 한 번 실행하세요.
 
 ## 가리는 정보
 
@@ -82,12 +82,12 @@ Node.js 18 이상이 필요합니다. 기본 기능은 외부 패키지를 쓰�
 ## 직접 실행
 
 ```bash
-node veilnote/scripts/veil.mjs detect 회의록.txt            # 미리보기
-node veilnote/scripts/veil.mjs veil 회의록.txt              # 가리기 → 회의록.veiled.txt + 회의록.veilmap.json
-node veilnote/scripts/veil.mjs veil report.txt --ner        # NER 모델도 함께 사용
-node veilnote/scripts/veil.mjs unveil 요약.md --map 회의록.veilmap.json   # 되돌리기
-node veilnote/scripts/veil.mjs check 보낼파일.md --map 회의록.veilmap.json  # 유출 검사
-node veilnote/scripts/selftest.mjs                          # 자체 테스트 (--ner 를 붙이면 모델까지)
+node maskforge/scripts/veil.mjs detect 회의록.txt            # 미리보기
+node maskforge/scripts/veil.mjs veil 회의록.txt              # 가리기 → 회의록.veiled.txt + 회의록.veilmap.json
+node maskforge/scripts/veil.mjs veil report.txt --ner        # NER 모델도 함께 사용
+node maskforge/scripts/veil.mjs unveil 요약.md --map 회의록.veilmap.json   # 되돌리기
+node maskforge/scripts/veil.mjs check 보낼파일.md --map 회의록.veilmap.json  # 유출 검사
+node maskforge/scripts/selftest.mjs                          # 자체 테스트 (--ner 를 붙이면 모델까지)
 ```
 
 ## 한계

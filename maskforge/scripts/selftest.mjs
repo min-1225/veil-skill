@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// VeilNote 자체 테스트: node selftest.mjs
+// MaskForge 자체 테스트: node selftest.mjs
 // 탐지·토큰화·복원·유출 검사가 기대대로 동작하는지 확인한다.
 
 import assert from 'node:assert/strict';
