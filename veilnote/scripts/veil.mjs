@@ -16,6 +16,18 @@ import { DEFAULT_TYPES, ENTITY_TYPES, maskValue } from './lib/detect.mjs';
 import { checkLeak, findPreexistingTokens, unveil, veil } from './lib/tokenize.mjs';
 import { detect } from './lib/detect.mjs';
 
+/** --ner 이면 로컬 NER 모델을 돌려 개체 위치 목록을 돌려준다 (없으면 빈 배열) */
+async function nerFor(text, opt) {
+  if (!opt.ner) return [];
+  const { runNer, NerUnavailableError } = await import('./lib/ner.mjs');
+  try {
+    return await runNer(text, { model: opt['ner-model'], onProgress: (m) => console.error(m) });
+  } catch (e) {
+    if (e instanceof NerUnavailableError) fail(e.message);
+    fail(`NER 실행 실패: ${e.message}`);
+  }
+}
+
 const HELP = `VeilNote — 민감정보 가리기/되돌리기
 
 사용법:
@@ -35,6 +47,9 @@ const HELP = `VeilNote — 민감정보 가리기/되돌리기
   --types <A,B>        탐지 종류를 이것만 사용 (기본: DATE 제외 전부)
   --add-types <A,B>    기본 종류에 추가 (예: DATE)
   --skip-types <A,B>   기본 종류에서 제외 (예: AMOUNT)
+  --ner                로컬 NER 모델로 사람·회사·지명도 찾기 (영·독·불·스·이·포·네·아랍·중 등)
+                       처음 한 번 scripts 폴더에서 npm install 필요, 모델은 첫 실행 때 내려받음
+  --ner-model <id>     다른 Hugging Face 토큰 분류 모델 사용 (ONNX 변환본)
   --show               원문 값을 화면에 표시 (원문이 이미 대화에 있을 때만)
   --loose              unveil: 대괄호가 빠진 토큰(PERSON_1)도 복원
   --force              출력 파일이 이미 있어도 덮어쓰기
@@ -47,7 +62,7 @@ function parseArgs(argv) {
   const [cmd, ...rest] = argv;
   const files = [];
   const opt = {};
-  const flags = new Set(['show', 'loose', 'force', 'help']);
+  const flags = new Set(['show', 'loose', 'force', 'help', 'ner']);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (a.startsWith('--')) {
@@ -182,12 +197,13 @@ function cmdTypes() {
   console.log('\n사용자 사전(--dict)에는 PROJECT, PRODUCT 같은 임의의 종류 이름도 쓸 수 있습니다.');
 }
 
-function cmdDetect(files, opt) {
+async function cmdDetect(files, opt) {
   if (files.length !== 1) fail('detect 는 파일 하나만 받습니다.');
   const { text } = readText(files[0]);
   const o = buildOptions(opt);
   const prior = opt.map && fs.existsSync(opt.map) ? loadMap(opt.map).entries : [];
-  const { thisFile, leak } = veil(text, { ...o, prior });
+  const ner = await nerFor(text, opt);
+  const { thisFile, leak } = veil(text, { ...o, prior, ner });
   console.log(`미리보기: ${files[0]} (${[...text].length}자) — 파일은 만들지 않았습니다.`);
   printEntries(thisFile, { show: opt.show, countKey: 'countHere' });
   const unc = thisFile.filter((e) => e.uncertain).length;
@@ -195,7 +211,7 @@ function cmdDetect(files, opt) {
   printLeak(leak, opt.show);
 }
 
-function cmdVeil(files, opt) {
+async function cmdVeil(files, opt) {
   if (files.length === 0) fail('가릴 파일을 지정하세요.');
   if (opt.out && files.length > 1) fail('--out 은 파일이 하나일 때만 쓸 수 있습니다.');
   const o = buildOptions(opt);
@@ -217,7 +233,8 @@ function cmdVeil(files, opt) {
   for (const file of files) {
     const { text, encoding } = readText(file);
     const pre = findPreexistingTokens(text);
-    const r = veil(text, { ...o, prior: entries });
+    const ner = await nerFor(text, opt);
+    const r = veil(text, { ...o, prior: entries, ner });
     entries = r.entries;
     const outPath = opt.out || derivePath(file, 'veiled');
     writeText(outPath, r.veiled, opt.force);
@@ -292,8 +309,8 @@ if (!cmd || opt.help || cmd === 'help' || cmd === '--help') {
 }
 switch (cmd) {
   case 'types': cmdTypes(); break;
-  case 'detect': cmdDetect(files, opt); break;
-  case 'veil': cmdVeil(files, opt); break;
+  case 'detect': await cmdDetect(files, opt); break;
+  case 'veil': await cmdVeil(files, opt); break;
   case 'unveil': cmdUnveil(files, opt); break;
   case 'check': cmdCheck(files, opt); break;
   default: fail(`알 수 없는 명령: ${cmd}\n\n${HELP}`);

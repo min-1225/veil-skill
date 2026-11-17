@@ -1,0 +1,10 @@
+{
+  "name": "veilnote-scripts",
+  "private": true,
+  "type": "module",
+  "description": "VeilNote skill scripts. Dependencies are only needed for the optional --ner mode.",
+  "engines": { "node": ">=18" },
+  "optionalDependencies": {
+    "@huggingface/transformers": "4.3.2"
+  }
+}

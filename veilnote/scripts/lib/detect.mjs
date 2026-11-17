@@ -4,20 +4,26 @@
 //   backend/src/shared/detector.js  (주민번호·카드·이메일·전화·금액·날짜)
 //   frontend/src/lib/tokenizer.ts   (회사명 사전·접미어, 인명 성씨+직함/조사)
 // 두 쪽에 흩어져 있던 탐지 종류를 하나로 합치고, 스킬용으로 보강했다.
-// 외부 의존성 없음 (Node 18+).
+// 다국어 규칙(영어·일본어·중국어, 국제 형식)은 rules-intl.mjs, 선택 기능인 NER 은 ner.mjs.
+// 이 파일은 외부 의존성 없음 (Node 18+).
+
+import { detectIntlOrgs, detectIntlPersons, INTL_REGEX_RULES, luhnValid } from './rules-intl.mjs';
 
 /** 탐지 종류와 설명. defaultOn=false 인 종류는 --types 로 켜야 한다. */
 export const ENTITY_TYPES = {
   RRN: { label: '주민등록번호/외국인등록번호', defaultOn: true, highRisk: true },
+  SSN: { label: '미국 사회보장번호(SSN)', defaultOn: true, highRisk: true },
+  PASSPORT: { label: '여권번호', defaultOn: true, highRisk: true },
   CARD: { label: '카드번호', defaultOn: true, highRisk: true },
   EMAIL: { label: '이메일', defaultOn: true, highRisk: true },
   PHONE: { label: '전화번호', defaultOn: true, highRisk: true },
-  ACCOUNT: { label: '계좌번호', defaultOn: true, highRisk: true },
-  IP: { label: 'IP 주소', defaultOn: true, highRisk: false },
+  ACCOUNT: { label: '계좌번호·IBAN', defaultOn: true, highRisk: true },
+  IP: { label: 'IP 주소(v4·v6)', defaultOn: true, highRisk: false },
   ADDRESS: { label: '주소', defaultOn: true, highRisk: false },
   AMOUNT: { label: '금액', defaultOn: true, highRisk: false },
   ORG: { label: '회사·기관명', defaultOn: true, highRisk: false },
   PERSON: { label: '인명', defaultOn: true, highRisk: false },
+  LOCATION: { label: '지명 (--ner 에서만)', defaultOn: true, highRisk: false },
   DATE: { label: '날짜', defaultOn: false, highRisk: false },
 };
 
@@ -41,8 +47,10 @@ const ADDRESS_TAIL =
 const REGEX_RULES = [
   // 주민등록번호/외국인등록번호 YYMMDD-#######  (뒷자리 첫 숫자 1~8)
   { type: 'RRN', confidence: 0.99, regex: /(?<!\d)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-\s]?[1-8]\d{6}(?!\d)/g },
-  // 카드번호 16자리 (4-4-4-4)
-  { type: 'CARD', confidence: 0.95, regex: /(?<!\d)(?:\d{4}[-\s]){3}\d{4}(?!\d)|(?<![\d-])\d{16}(?![\d-])/g },
+  // 카드번호 4-4-4-4: 체크섬(Luhn)이 맞으면 확실, 틀려도 형식이 카드라 가리되 '확인 필요'
+  // (붙여 쓴 숫자열은 rules-intl.mjs 에서 체크섬이 맞을 때만 잡는다)
+  { type: 'CARD', confidence: 0.95, regex: /(?<!\d)(?:\d{4}[-\s]){3}\d{4}(?!\d)/g, filter: (v) => luhnValid(v.replace(/\D/g, '')) },
+  { type: 'CARD', confidence: 0.7, uncertain: true, regex: /(?<!\d)(?:\d{4}[-\s]){3}\d{4}(?!\d)/g, filter: (v) => !luhnValid(v.replace(/\D/g, '')) },
   // 이메일
   { type: 'EMAIL', confidence: 0.98, regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g },
   // 전화번호: 휴대폰(+82 포함), 지역번호 유선, 대표번호(1588-xxxx)
@@ -274,7 +282,7 @@ const det = (type, start, end, text, source, confidence, extra = {}) => ({
 
 function detectByRegex(text) {
   const out = [];
-  for (const rule of REGEX_RULES) {
+  for (const rule of [...REGEX_RULES, ...INTL_REGEX_RULES]) {
     rule.regex.lastIndex = 0;
     let m;
     while ((m = rule.regex.exec(text)) !== null) {
@@ -350,10 +358,6 @@ function detectOrgBySuffix(text) {
     out.push(det('ORG', m.index, m.index + name.length, text, 'org-context', 0.65, { uncertain: true }));
   }
 
-  // 영문 법인 표기: Acme Inc. / Foo Corp / Bar Co., Ltd.
-  const en = /(?<![A-Za-z0-9])[A-Z][A-Za-z0-9&]*(?:\s[A-Z][A-Za-z0-9&]*){0,3},?\s(?:Inc\.?|Corp\.?|Corporation|Ltd\.?|LLC|GmbH|Co\.,?\s?Ltd\.?)/g;
-  while ((m = en.exec(text)) !== null) out.push(det('ORG', m.index, m.index + m[0].length, text, 'org-suffix', 0.85));
-
   return out;
 }
 
@@ -402,6 +406,26 @@ function detectByDictionary(text, dictionary = {}) {
   return out;
 }
 
+/**
+ * NER 결과({type, start, end, score})를 표준 탐지 형식으로 바꾼다.
+ * 원본 VeilNote backend tokenizer.js 의 nerToDetections 와 같은 역할.
+ * NER 은 규칙이 놓친 빈자리를 채우는 용도라 모든 규칙보다 신뢰도를 낮게 둔다.
+ * (규칙이 "北京市朝阳区建国路88号" 전체를 잡았는데 NER 이 "北京市"만 잡아서 이기면 "88号"가 새기 때문)
+ * 점수가 낮거나, TASK 처럼 대문자만으로 된 짧은 단어는 '확인 필요'로 표시한다.
+ */
+function nerToDetections(text, entities = []) {
+  const out = [];
+  for (const e of entities) {
+    if (e.start == null || e.end == null || e.end <= e.start) continue;
+    const value = text.slice(e.start, e.end);
+    if (!value.trim()) continue;
+    const shoutyWord = /^[A-Z0-9]{2,6}$/.test(value);
+    const sure = (e.score ?? 0) >= 0.85 && !shoutyWord;
+    out.push(det(e.type, e.start, e.end, text, 'ner', sure ? 0.5 : 0.45, sure ? {} : { uncertain: true }));
+  }
+  return out;
+}
+
 // ───────────────────────── 합치기 ─────────────────────────
 
 /** 겹치는 탐지는 신뢰도 높은 것 → 더 긴 것 순으로 남긴다. */
@@ -430,8 +454,10 @@ function propagate(text, detections) {
   const extra = [];
   for (const d of seen.values()) {
     for (const word of [d.value, ...(d.variants || [])]) {
+      // variant: 확실한 탐지에서 나온 부분 이름(성만, ㈜ 없는 회사명)이라 원래 탐지의 확실도를 따른다
+      const source = word === d.value ? 'propagate' : 'variant';
       for (const [s, e] of findAllOccurrences(text, word)) {
-        extra.push(det(d.type, s, e, text, 'propagate', d.confidence - 0.01, d.uncertain ? { uncertain: true } : {}));
+        extra.push(det(d.type, s, e, text, source, d.confidence - 0.01, d.uncertain ? { uncertain: true } : {}));
       }
     }
   }
@@ -445,8 +471,9 @@ function propagate(text, detections) {
  *   types: 켤 탐지 종류 (기본 DEFAULT_TYPES). 사용자 사전의 종류는 항상 켜진다.
  *   dictionary: { ORG: ['한빛테크'], PERSON: ['소지윤'], PROJECT: ['코드명 블루'] } — 임의 종류명 가능
  *   allow: 절대 가리지 않을 단어 목록 (오탐 제외용)
+ *   ner: ner.mjs 의 runNer() 가 미리 계산한 개체 목록 (선택). 규칙과 똑같이 합쳐진다.
  */
-export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [] } = {}) {
+export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [], ner = [] } = {}) {
   const enabled = new Set([...types.map((t) => t.toUpperCase()), ...Object.keys(dictionary).map((t) => t.toUpperCase())]);
   const allowSet = new Set(allow.map((a) => a.trim()).filter(Boolean));
 
@@ -455,6 +482,9 @@ export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [
     ...detectKnownOrgs(text),
     ...detectOrgBySuffix(text),
     ...detectPersons(text),
+    ...detectIntlOrgs(text),
+    ...detectIntlPersons(text),
+    ...nerToDetections(text, ner),
     ...detectByDictionary(text, dictionary),
   ].filter((d) => enabled.has(d.type) && !allowSet.has(d.value));
 

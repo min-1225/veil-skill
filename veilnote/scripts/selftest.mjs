@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { detect } from './lib/detect.mjs';
 import { checkLeak, unveil, veil } from './lib/tokenize.mjs';
+import { alignTokens } from './lib/ner.mjs';
 
 let passed = 0;
 const failures = [];
@@ -94,6 +95,73 @@ test('사용자 사전(임의 종류)과 allow 목록', () => {
   assert.ok(!v.some((x) => x.includes('삼성')), v.join(' | '));
 });
 
+console.log('다국어·국제 형식');
+const EN = `Attendees: John Smith, Priya Patel
+CEO John Smith reviewed the Acme Corp. renewal. Smith wants a discount.
+Dr. Laura Mendes from Blue Harbor Labs: laura@blueharbor.io, +1 (415) 555-0132.
+Wire €250,000 to IBAN DE89 3704 0044 0532 0130 00. Card 4111 1111 1111 1111.
+Ship to 1600 Amphitheatre Parkway, Mountain View, CA 94043. UK office: SW1A 1AA.
+Passport no. X12345678, SSN 123-45-6789. VPN 2001:db8:85a3::8a2e:370:7334.
+The Group agreed that our team will finalize the roadmap by Friday.`;
+test('영어: 이름(직함·역할·참석자 목록), 성만 나온 경우', () => {
+  const v = values(EN);
+  for (const want of ['PERSON:John Smith', 'PERSON:Priya Patel', 'PERSON:Laura Mendes', 'PERSON:Smith']) {
+    assert.ok(v.includes(want), `${want} 없음: ${v.join(' | ')}`);
+  }
+});
+test('영어: 회사, 국제 전화, IBAN, Luhn 카드, 주소, 여권, SSN, IPv6, 외화', () => {
+  const v = values(EN);
+  for (const want of ['ORG:Acme Corp.', 'ORG:Blue Harbor Labs', 'PHONE:+1 (415) 555-0132',
+    'ACCOUNT:DE89 3704 0044 0532 0130 00', 'CARD:4111 1111 1111 1111',
+    'ADDRESS:1600 Amphitheatre Parkway, Mountain View, CA 94043', 'ADDRESS:SW1A 1AA',
+    'PASSPORT:X12345678', 'SSN:123-45-6789', 'IP:2001:db8:85a3::8a2e:370:7334', 'AMOUNT:€250,000']) {
+    assert.ok(v.includes(want), `${want} 없음: ${v.join(' | ')}`);
+  }
+});
+test('영어 일반 표현(The Group, our team)은 건드리지 않는다', () => {
+  const v = values('The Group agreed that our team will finalize the roadmap by Friday. Sales Team sync.');
+  assert.deepEqual(v, [], v.join(' | '));
+});
+test('체크섬: 붙여 쓴 숫자는 틀리면 무시, 4-4-4-4 형식은 틀려도 가리되 확인 필요', () => {
+  assert.deepEqual(values('order 4111111111111112 shipped'), []);
+  assert.ok(!values('ref DE00 3704 0044 0532 0130 00').some((x) => x.startsWith('ACCOUNT')));
+  const d = detect('card 1234-5678-9012-3456');
+  assert.equal(d[0].type, 'CARD');
+  assert.equal(d[0].uncertain, true);
+});
+test('일본어: 경칭 이름, 株式会社(조사 앞에서 끊기), 우편번호·주소, 휴대폰', () => {
+  const v = values('参加者：田中さん、山田太郎様\n株式会社サンプルの見積もりは¥3,000,000。サンプルからの回答待ち。\n090-1234-5678 〒100-0005 東京都千代田区丸の内1-9-2');
+  for (const want of ['PERSON:田中', 'PERSON:山田太郎', 'AMOUNT:¥3,000,000', 'PHONE:090-1234-5678', 'ADDRESS:〒100-0005', 'ADDRESS:東京都千代田区丸の内1-9-2']) {
+    assert.ok(v.includes(want), `${want} 없음: ${v.join(' | ')}`);
+  }
+  assert.equal(v.filter((x) => x === 'ORG:サンプル').length, 2, v.join(' | '));
+});
+test('중국어: 호칭 이름, 有限公司(+약칭), 주소, 금액, 국제 전화', () => {
+  const v = values('参会：王伟先生、李娜女士\n华为技术有限公司报价为500万元，华为希望下周确认。\n地址：北京市朝阳区建国路88号 电话：+86 138 0013 8000');
+  for (const want of ['PERSON:王伟', 'PERSON:李娜', 'ORG:华为技术有限公司', 'ORG:华为', 'AMOUNT:500万元', 'ADDRESS:北京市朝阳区建国路88号', 'PHONE:+86 138 0013 8000']) {
+    assert.ok(v.includes(want), `${want} 없음: ${v.join(' | ')}`);
+  }
+});
+test('NER 결과 위치 맞추기 (모델 없이, 토큰 조각 → 원문 위치)', () => {
+  const text = 'Sarah met Pierre Dubois at Northwind in Paris.';
+  const tokens = [
+    { entity: 'B-PER', score: 0.99, index: 1, word: 'Sarah' },
+    { entity: 'B-PER', score: 0.99, index: 3, word: 'Pierre' },
+    { entity: 'I-PER', score: 0.99, index: 4, word: 'Dub' },
+    { entity: 'I-PER', score: 0.99, index: 5, word: '##ois' },
+    { entity: 'B-ORG', score: 0.99, index: 7, word: 'North' }, // ##wind 를 놓쳐도 단어 끝까지 늘어나야 함
+    { entity: 'B-LOC', score: 0.99, index: 10, word: 'Paris' },
+  ];
+  const spans = alignTokens(text, tokens).map((s) => `${s.type}:${text.slice(s.start, s.end)}`);
+  assert.deepEqual(spans, ['PERSON:Sarah', 'PERSON:Pierre Dubois', 'ORG:Northwind', 'LOCATION:Paris']);
+});
+test('NER 은 규칙이 잡은 더 긴 덩어리를 쪼개지 않는다', () => {
+  const text = '地址：北京市朝阳区建国路88号';
+  const s = text.indexOf('北京市');
+  const v = values(text, { ner: [{ type: 'LOCATION', start: s, end: s + 3, score: 0.99 }] });
+  assert.deepEqual(v, ['ADDRESS:北京市朝阳区建国路88号'], v.join(' | '));
+});
+
 console.log('토큰화·복원');
 test('같은 값은 같은 토큰, 왕복하면 원문과 같다', () => {
   const r = veil(MEETING);
@@ -145,6 +213,20 @@ test('유출 검사: 대응표 원문과 고위험 패턴 잔존을 잡는다', 
   assert.equal(leak.residualPatterns[0].type, 'PHONE');
   assert.ok(!JSON.stringify(leak).includes('9999'), '유출 리포트에 원문이 들어가면 안 됨');
 });
+
+// 실제 NER 모델 테스트 — `node selftest.mjs --ner` 일 때만 (npm install + 모델 다운로드 필요)
+if (process.argv.includes('--ner')) {
+  console.log('NER 모델 (실제 실행)');
+  const { runNer } = await import('./lib/ner.mjs');
+  const text = 'Sarah said Michael talked to Northwind about Berlin. Le directeur Pierre Dubois travaille chez Renault à Paris.';
+  const ents = await runNer(text);
+  test('영어·프랑스어 이름·회사·지명을 찾는다', () => {
+    const got = ents.map((e) => `${e.type}:${text.slice(e.start, e.end)}`);
+    for (const want of ['PERSON:Sarah', 'PERSON:Michael', 'ORG:Northwind', 'LOCATION:Berlin', 'PERSON:Pierre Dubois', 'ORG:Renault', 'LOCATION:Paris']) {
+      assert.ok(got.includes(want), `${want} 없음: ${got.join(' | ')}`);
+    }
+  });
+}
 
 console.log(`\n${passed}개 통과, ${failures.length}개 실패`);
 process.exit(failures.length ? 1 : 0);
