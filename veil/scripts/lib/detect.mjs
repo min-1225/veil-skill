@@ -9,6 +9,7 @@
 
 import { detectIntlOrgs, detectIntlPersons, INTL_REGEX_RULES, luhnValid } from './rules-intl.mjs';
 import { detectSecrets } from './rules-secrets.mjs';
+import { detectStructured } from './rules-structured.mjs';
 
 /** 탐지 종류와 설명. defaultOn=false 인 종류는 --types 로 켜야 한다. */
 export const ENTITY_TYPES = {
@@ -530,6 +531,7 @@ export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [
     ...detectIntlOrgs(text),
     ...detectIntlPersons(text),
     ...detectSecrets(text),
+    ...detectStructured(text),
     ...nerToDetections(text, ner),
     ...detectByDictionary(text, dictionary),
   ].filter((d) => enabled.has(d.type) && !allowSet.has(d.value));

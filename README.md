@@ -77,7 +77,7 @@ flowchart LR
 
 | Type | Examples |
 |---|---|
-| `PERSON` | John Smith, Dr. Laura Mendes, 김철수 팀장, 저는 김민수이고, 田中さん, 王伟先生 |
+| `PERSON` | John Smith, Dr. Laura Mendes, `name`/`customer` columns in CSV and tables, JSON `"name"`, 김철수 팀장, 저는 김민수이고, 田中さん, 王伟先生 |
 | `ORG` | Acme Corp., Blue Harbor Labs, ㈜한빛테크, 株式会社サンプル, 华为技术有限公司 |
 | `EMAIL` · `PHONE` | name@example.com, +1 (415) 555-0132, 010-1234-5678, 090-1234-5678 |
 | `SECRET` API keys & secrets | OpenAI `sk-proj-…`, Anthropic `sk-ant-…`, GitHub `ghp_…`, AWS `AKIA…`, Google `AIza…`, Slack/Stripe/Hugging Face keys, JWTs, private keys, `Password: Hunter2!pass`, `postgresql://user:pass@host` (whole URL) |
@@ -140,6 +140,7 @@ rules only:  Sarah said Michael talked to Northwind about the Berlin office.
 - 🔒 **Local only.** Masking, the map and restoring all happen on your machine. Command output shows `J*********`, never the value.
 - 🔁 **Reversible.** Unlike plain redaction, you get the real values back in the final result.
 - 🧩 **Consistent tokens.** Once found, a value is masked everywhere it appears, and a shared map keeps tokens stable across files.
+- 📊 **Tables and data.** Values under columns and keys like `name`, `customer`, `이름`, `담당자` in CSV, TSV, Markdown tables, JSON and YAML are masked; config values like `"name": "my-app"` are left alone.
 - 🧮 **Checksums.** Card numbers (Luhn) and IBANs (mod 97) cut false positives.
 - 🚨 **Leak check.** `check` flags any original value or high-risk pattern left in a file before you send it.
 - 🇰🇷 **Korean-aware.** Particle correction on restore, CP949 files, 성씨+직함 name rules.
@@ -166,12 +167,16 @@ To enable NER: `cd veil/scripts && npm install`.
 ## FAQ
 
 **Does Claude ever see my original text?**
-Not if you give it a file path. The skill tells Claude to read only the masked copy and never the original, the map or the restored file. If something slips past detection, Claude re-masks it and tells you what it saw.
+Not the original file itself. The skill tells Claude to read only the masked copy and never the original, the map or the restored file. But **anything detection misses stays in the masked copy, and Claude will see it.** If Claude notices such a value it re-masks it and tells you what it saw, but by then it has already been read. These are rules the skill follows, not a security boundary enforced by the OS.
 
 **How reliable is detection?**
-Structured data is caught with certainty: emails, phones, national IDs, passports and accounts by pattern; card numbers and IBANs verified by checksum (Luhn, mod 97); API keys by their prefixes (`sk-`, `ghp_`, `AKIA`…); connection strings masked whole, credentials included.
-Names and companies are found through Korean titles, particles and self-introductions (`김철수 팀장`, `저는 김민수이고`, `담당자는 …`) and English, Japanese and Chinese honorific rules. Once a value is found, Veil searches the whole document again so every later mention is masked too. After masking, the leak check verifies that no original value or high-risk pattern survived.
-It's validated on real-world document shapes (meeting notes, support logs, HR memos, English minutes), and 200 tests run in GitHub Actions on every push. For a proper noun that appears with no title or introduction at all, add one line to a dictionary file; dictionary entries outrank every rule.
+It depends on what is being detected.
+
+- **Fixed-format data** (emails, phones, national IDs, passports, accounts, cards, IBANs, API keys, connection strings) is found by pattern, checksum (Luhn, mod 97) or key prefix, and is the most dependable. Unusual spellings such as full-width digits (`９００１０１…`) can still be missed.
+- **Names and companies** rely on cues. In prose: titles, particles and self-introductions (`김철수 팀장`, `저는 김민수이고`). In CSV, tables and JSON: column names and keys (`이름`, `담당자`, `name`, `customer`). Names with no cue (`민수가 그러는데`), romanized Korean names in prose (`Kim Minsu sent…`) and unfamiliar company names can be missed.
+- Once a value is found, every later mention is masked too, and the leak check confirms no original value or high-risk pattern survived. It cannot catch values that were never detected in the first place.
+
+**There are no accuracy numbers yet.** The 221 self-tests are regression tests that keep features from breaking; precision and recall have not been measured on an independent dataset that the rules were not written against. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
 
 **Where is the token map?**
 Next to your file as `*.veilmap.json`. It contains the originals, so don't share or commit it. This repo's `.gitignore` already excludes it.
@@ -182,7 +187,7 @@ No. Transformers.js runs the model locally. The only network access is the one-t
 ## Tests
 
 ```bash
-node veil/scripts/selftest.mjs          # 200 tests: detection in 4 languages, secrets, false positives, round trips, CLI
+node veil/scripts/selftest.mjs          # 221 tests: detection in 4 languages, secrets, tables/data, false positives, round trips, CLI
 node veil/scripts/selftest.mjs -q       # print failures only
 node veil/scripts/selftest.mjs --ner    # + real NER model
 ```

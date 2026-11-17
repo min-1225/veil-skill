@@ -110,6 +110,8 @@ VEIL --help
 기본으로 켜짐: `RRN`(주민·외국인등록번호), `SSN`(미국), `PASSPORT`, `SECRET`(비밀번호·API 키·토큰·계정 정보가 든 접속 주소), `EMPLOYEE_ID`(사번), `CARD`, `EMAIL`, `PHONE`, `ACCOUNT`(계좌·IBAN), `IP`(v4·v6), `ADDRESS`, `AMOUNT`(금액), `ORG`(회사·기관), `PERSON`(인명), `LOCATION`(지명, `--ner`에서만 나옴)
 
 `SECRET`은 형식이 정해진 키(OpenAI `sk-…`, Anthropic `sk-ant-…`, GitHub `ghp_…`, AWS `AKIA…`, Slack, Stripe, JWT, 개인 키 블록 등), `비밀번호:`·`password=` 뒤의 값, `postgresql://user:pass@host` 같은 접속 주소 전체를 잡는다. 사전(`--dict`)에 넣은 값은 어떤 규칙보다 우선한다.
+
+CSV·TSV·마크다운 표·JSON·YAML에서는 열 이름과 키(`이름`, `성명`, `담당자`, `고객명`, `회사`, `주소`, `name`, `customer`, `company`, `address` 등)를 단서로 그 값을 가린다. 성씨 목록에 기대지 않으므로 표 안의 `John Smith`, `Kim Minsu`도 잡힌다. 다만 열 이름이 이 목록에 없는 경우(예: `연락 담당`, `PIC`)는 잡히지 않으니, 그런 데이터는 미리보기 결과를 보고 사용자에게 열 이름을 물어서 사전이나 별도 처리로 보완한다.
 기본으로 꺼짐: `DATE`. 일정은 보통 작업에 필요해서 꺼 두었다. 필요하면 `--add-types DATE`로 켠다.
 금액이 작업에 꼭 필요하면(예: 예산 합계 계산) `--skip-types AMOUNT`로 뺄 수 있다. 무엇을 남길지는 사용자에게 확인한다.
 
