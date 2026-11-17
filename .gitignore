@@ -1,0 +1,9 @@
+# 원문이 들어 있는 파일은 절대 올리지 않는다
+*.veilmap.json
+*.unveiled.*
+
+# 작업 중 생기는 파일
+*.veiled.*
+*-workspace/
+node_modules/
+.DS_Store
