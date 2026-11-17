@@ -90,7 +90,33 @@ flowchart LR
 | `LOCATION` | Berlin, Paris (with `--ner`) |
 | `DATE` | Nov 17, 2026 · 2026년 3월 5일 (off by default) |
 
-Add your own terms (project code names, new clients) with a dictionary file, and exclude false positives with `--allow`.
+## Choose what to mask
+
+You don't have to mask everything. In Claude Code just say it ("only mask names and IDs", "keep the amounts") and the skill picks the right options.
+
+| You want to | Option | Example |
+|---|---|---|
+| Mask only certain types | `--types` | `--types PERSON,RRN` → only names and national IDs |
+| Keep certain types | `--skip-types` | `--skip-types AMOUNT` → amounts stay as they are |
+| Turn on a type that's off by default | `--add-types` | `--add-types DATE` → dates are masked too |
+| Keep specific words | `--allow` | `--allow "Acme Corp.,Legal"` (use the exact text that was masked) |
+| Mask extra words | `--dict` | `dict.json`: `{"PROJECT":["Bluemoon"]}` |
+
+One sentence with each option applied:
+
+```
+original              CEO John Smith (SSN 123-45-6789) offered Acme Corp. $50,000 on Nov 17, 2026. Project Bluemoon. Call +1 (415) 555-0132.
+default               CEO [PERSON_1] (SSN [SSN_1]) offered [ORG_1] [AMOUNT_1] on Nov 17, 2026. Project Bluemoon. Call [PHONE_1].
+--types PERSON,SSN    CEO [PERSON_1] (SSN [SSN_1]) offered Acme Corp. $50,000 on Nov 17, 2026. Project Bluemoon. Call +1 (415) 555-0132.
+--skip-types AMOUNT   CEO [PERSON_1] (SSN [SSN_1]) offered [ORG_1] $50,000 on Nov 17, 2026. Project Bluemoon. Call [PHONE_1].
+--add-types DATE      CEO [PERSON_1] (SSN [SSN_1]) offered [ORG_1] [AMOUNT_1] on [DATE_1]. Project Bluemoon. Call [PHONE_1].
+--allow "Acme Corp."  CEO [PERSON_1] (SSN [SSN_1]) offered Acme Corp. [AMOUNT_1] on Nov 17, 2026. Project Bluemoon. Call [PHONE_1].
+--dict dict.json      CEO [PERSON_1] (SSN [SSN_1]) offered [ORG_1] [AMOUNT_1] on Nov 17, 2026. Project [PROJECT_1]. Call [PHONE_1].
+```
+
+- Dictionary type names (`PROJECT`, `PRODUCT`, …) are up to you, and dictionary entries outrank every rule.
+- If you deliberately leave high-risk data (phones, national IDs, API keys) unmasked, the leak check warns you. That's expected; keep it if it's intentional.
+- Options combine: `--skip-types AMOUNT --allow "Legal" --dict dict.json`
 
 ## Languages
 
