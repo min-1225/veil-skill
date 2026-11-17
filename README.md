@@ -68,13 +68,15 @@ flowchart LR
 
 | Type | Examples |
 |---|---|
-| `PERSON` | John Smith, Dr. Laura Mendes, 김철수 팀장, 田中さん, 王伟先生 |
+| `PERSON` | John Smith, Dr. Laura Mendes, 김철수 팀장, 저는 김민수이고, 田中さん, 王伟先生 |
 | `ORG` | Acme Corp., Blue Harbor Labs, ㈜한빛테크, 株式会社サンプル, 华为技术有限公司 |
 | `EMAIL` · `PHONE` | name@example.com, +1 (415) 555-0132, 010-1234-5678, 090-1234-5678 |
 | `RRN` · `SSN` · `PASSPORT` | 900101-1234567, 123-45-6789, Passport no. X12345678 |
 | `CARD` · `ACCOUNT` | 4111 1111 1111 1111 (Luhn-checked), IBAN DE89 3704 … (mod-97-checked), 110-123-456789 |
 | `ADDRESS` | 1600 Amphitheatre Parkway, Mountain View, CA 94043 · SW1A 1AA · 경기도 성남시 분당구 판교역로 235 · 〒100-0005 · 北京市朝阳区建国路88号 |
 | `AMOUNT` | $50,000, €250,000, ¥3,000,000, 3억 2천만원, 500万元 |
+| `SECRET` | Password: Hunter2!pass, sk-proj-…, ghp_…, AKIA…, JWTs, postgresql://user:pass@host (whole URL) |
+| `EMPLOYEE_ID` | Employee ID: 004512, 사번 EMP-20431 |
 | `IP` | 192.168.0.10, 2001:db8::8a2e:370:7334 |
 | `LOCATION` | Berlin, Paris (with `--ner`) |
 | `DATE` | Nov 17, 2026 · 2026년 3월 5일 (off by default) |
@@ -141,7 +143,7 @@ No. Transformers.js runs the model locally. The only network access is the one-t
 ## Tests
 
 ```bash
-node veil/scripts/selftest.mjs          # 27 tests: detection, tokenizing, restoring, leak checks
+node veil/scripts/selftest.mjs          # 33 tests: detection, tokenizing, restoring, leak checks
 node veil/scripts/selftest.mjs --ner    # + real NER model
 ```
 

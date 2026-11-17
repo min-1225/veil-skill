@@ -95,6 +95,53 @@ test('사용자 사전(임의 종류)과 allow 목록', () => {
   assert.ok(!v.some((x) => x.includes('삼성')), v.join(' | '));
 });
 
+console.log('비밀 정보·직함 없는 이름 (사용자 리포트 회귀)');
+const REPORT = `안녕하세요, 저는 김민수이고 사번은 EMP-20431입니다.
+이번 건 담당자는 김민수이며, 문의는 메일로 주세요.
+관리자 비밀번호: Hunter2!pass
+OpenAI 키: sk-proj-Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7cDe0f
+GitHub 토큰: ghp_1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R
+DB 접속: postgresql://admin:MySecretPassword!2026@db.example.com:5432/prod
+지금 사용하는 서버는 3대입니다.`;
+test('직함 없는 이름: "저는 김민수이고", "담당자는 김민수이며"', () => {
+  const v = values(REPORT);
+  assert.equal(v.filter((x) => x === 'PERSON:김민수').length, 2, v.join(' | '));
+  for (const [t, want] of [['박서연이에요, 반가워요.', '박서연'], ['작성자는 정하늘입니다', '정하늘'], ['이름: 오세훈', '오세훈'], ['제 이름은 송민호예요', '송민호']]) {
+    assert.ok(values(t).includes(`PERSON:${want}`), `${t} → ${values(t).join(' | ')}`);
+  }
+});
+test('비밀번호, API 키, GitHub 토큰, 사번', () => {
+  const v = values(REPORT);
+  for (const want of ['SECRET:Hunter2!pass', 'SECRET:sk-proj-Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7cDe0f',
+    'SECRET:ghp_1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R', 'EMPLOYEE_ID:EMP-20431']) {
+    assert.ok(v.includes(want), `${want} 없음: ${v.join(' | ')}`);
+  }
+  assert.ok(values('비번은 qwer1234!이고 바꿔야 함').includes('SECRET:qwer1234!'));
+});
+test('계정 정보가 든 DB 주소는 통째로 가린다 (이메일 규칙이 일부만 가져가면 안 됨)', () => {
+  const r = veil(REPORT);
+  assert.ok(!r.veiled.includes('MySecretPassword'), r.veiled);
+  assert.ok(!r.veiled.includes('://'), r.veiled);
+  assert.ok(r.entries.some((e) => e.type === 'SECRET' && e.original.startsWith('postgresql://admin:')));
+  assert.ok(!r.entries.some((e) => e.type === 'EMAIL'), '이메일로 잘못 잡힘');
+});
+test('유출 검사: 접속 주소가 일부만 가려지면 경고한다', () => {
+  const leak = checkLeak('DB: postgresql://admin:MySecretPassword![EMAIL_3]:5432/prod', []);
+  assert.equal(leak.clean, false);
+  assert.ok(leak.residualPatterns.some((p) => p.type === 'SECRET'));
+  assert.equal(checkLeak('DB: [SECRET_4], web https://example.com/a', []).clean, true);
+});
+test('사전은 어떤 규칙보다 우선한다', () => {
+  const url = 'postgresql://admin:MySecretPassword!2026@db.example.com:5432/prod';
+  assert.deepEqual(values(`DB: ${url}`, { dictionary: { DBURL: [url] } }), [`DBURL:${url}`]);
+});
+test('오탐 방지: 동사 어간·일반 표현·비밀번호 관련 문장', () => {
+  for (const t of ['지금 사용하는 서버는 3대입니다.', '진행되는 일정', '이름은 나중에 정하자', '담당자는 정해지지 않았다',
+    '전 세계 사용자', '비밀번호를 변경했습니다', 'password reset link sent', '토큰 사용량이 늘었다', '고객이었다', '한국이다']) {
+    assert.deepEqual(values(t), [], `${t} → ${values(t).join(' | ')}`);
+  }
+});
+
 console.log('다국어·국제 형식');
 const EN = `Attendees: John Smith, Priya Patel
 CEO John Smith reviewed the Acme Corp. renewal. Smith wants a discount.

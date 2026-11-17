@@ -68,13 +68,15 @@ flowchart LR
 
 | 종류 | 예 |
 |---|---|
-| `PERSON` 인명 | 김철수 팀장, 참석: 박지영, Dr. Laura Mendes, 田中さん, 王伟先生 |
+| `PERSON` 인명 | 김철수 팀장, 저는 김민수이고, 참석: 박지영, Dr. Laura Mendes, 田中さん, 王伟先生 |
 | `ORG` 회사·기관 | ㈜한빛테크, 라온소프트, 경쟁사 OO, Acme Corp., 株式会社サンプル, 华为技术有限公司 |
 | `EMAIL` · `PHONE` | name@example.com, 010-1234-5678, +1 (415) 555-0132, 090-1234-5678 |
 | `RRN` · `SSN` · `PASSPORT` | 900101-1234567, 123-45-6789, 여권번호 M12345678 |
 | `CARD` · `ACCOUNT` | 카드번호(Luhn 검증), IBAN(mod 97 검증), 110-123-456789 |
 | `ADDRESS` 주소 | 경기도 성남시 분당구 판교역로 235 3층, 1600 Amphitheatre Parkway, 〒100-0005, 北京市朝阳区建国路88号 |
 | `AMOUNT` 금액 | 3억 2천만원, $50,000, €250,000, ¥3,000,000, 500万元 |
+| `SECRET` 비밀정보 | 비밀번호: Hunter2!pass, sk-proj-…, ghp_…, AKIA…, JWT, postgresql://user:pass@host (주소 전체) |
+| `EMPLOYEE_ID` 사번 | 사번 EMP-20431, Employee ID: 004512 |
 | `IP` | 192.168.0.10, 2001:db8::8a2e:370:7334 |
 | `LOCATION` 지명 | Berlin, Paris (`--ner`에서만) |
 | `DATE` 날짜 | 2026년 3월 5일, Nov 17, 2026 (기본 꺼짐) |
@@ -141,7 +143,7 @@ NER을 쓰려면: `cd veil/scripts && npm install`
 ## 테스트
 
 ```bash
-node veil/scripts/selftest.mjs          # 27개: 탐지·토큰화·복원·유출 검사
+node veil/scripts/selftest.mjs          # 33개: 탐지·토큰화·복원·유출 검사
 node veil/scripts/selftest.mjs --ner    # + 실제 NER 모델
 ```
 

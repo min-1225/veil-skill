@@ -8,12 +8,15 @@
 // 이 파일은 외부 의존성 없음 (Node 18+).
 
 import { detectIntlOrgs, detectIntlPersons, INTL_REGEX_RULES, luhnValid } from './rules-intl.mjs';
+import { detectSecrets } from './rules-secrets.mjs';
 
 /** 탐지 종류와 설명. defaultOn=false 인 종류는 --types 로 켜야 한다. */
 export const ENTITY_TYPES = {
   RRN: { label: '주민등록번호/외국인등록번호', defaultOn: true, highRisk: true },
   SSN: { label: '미국 사회보장번호(SSN)', defaultOn: true, highRisk: true },
   PASSPORT: { label: '여권번호', defaultOn: true, highRisk: true },
+  SECRET: { label: '비밀번호·API 키·토큰·접속 주소', defaultOn: true, highRisk: true },
+  EMPLOYEE_ID: { label: '사번·직원번호', defaultOn: true, highRisk: true },
   CARD: { label: '카드번호', defaultOn: true, highRisk: true },
   EMAIL: { label: '이메일', defaultOn: true, highRisk: true },
   PHONE: { label: '전화번호', defaultOn: true, highRisk: true },
@@ -212,6 +215,8 @@ const PERSON_STOPWORDS = new Set([
   '사이트', '서버가', '하드웨어', '소프트웨어', '데이터', '마이그레이션', '이메일', '공지사항',
   '최우선', '최적화', '고도화', '정상화', '자동화', '표준화', '구체화', '사전에', '하자가', '재고가',
   '도면이', '노트북', '모니터', '키보드', '태블릿', '프린터',
+  // "이름은 나중에", "담당자는 미정" 처럼 소개하는 말 뒤에 오는 일반 표현
+  '나중에', '나중', '아직', '미정', '미정이', '추후', '추후에', '비공개', '없음', '모름', '공석',
 ]);
 
 // 2음절 이름 + 조사 패턴에서, 이 글자로 끝나면 사람 이름보다 일반 명사일 가능성이 큼
@@ -219,7 +224,19 @@ const NOUN_ENDINGS = new Set([
   '사', '도', '표', '품', '율', '률', '액', '량', '료', '점', '국', '팀', '부', '과', '실', '처',
   '관', '소', '적', '식', '법', '력', '체', '물', '계', '건', '별', '층', '형', '망', '업', '단',
   '회', '비', '장', '청', '원', '안', '선', '권', '로', '일', '월', '년',
+  // 동사·형용사 어간 (사용하는 → "사용하", 진행되는 → "진행되" 를 이름으로 잡지 않도록)
+  '하', '되', '해', '했', '된', '할', '함', '히', '있', '없', '같', '됨', '됐', '봤', '왔', '갔',
 ]);
+
+// 이름 바로 뒤에 붙는 서술격 조사·어미: 김민수이고, 김민수이며, 김민수입니다
+const PERSON_COPULAS = ['이고요', '이고', '이며', '입니다', '이에요', '이었', '이라고', '이라는', '이시고', '이시며', '이세요', '이구요'];
+const PERSON_COPULAS_END = ['이다', '였다']; // 뒤에 한글이 더 붙지 않을 때만
+
+// "저는 김민수", "담당자는 김민수" — 이런 말 바로 뒤에는 이름이 올 가능성이 높다
+const PERSON_INTRO_WORDS = [
+  '저는', '전', '제 이름은', '제이름은', '이름은', '성함은', '성명은', '성명', '이름', '본인은',
+  '담당자는', '담당자', '담당은', '작성자는', '발표자는', '보고자는', '신청자는', '문의는', '연락처는',
+];
 
 // 회사명 뒤에 붙은 조사를 떼어낼 때 사용
 const TRAILING_PARTICLES = [
@@ -384,6 +401,30 @@ function detectPersons(text) {
     out.push(det('PERSON', m.index, m.index + v.length, text, 'person-particle', 0.55, { uncertain: true }));
   }
 
+  // ②-1 성+2음절 이름 뒤에 서술격 조사: "김민수이고", "김민수입니다", "김민수이며"
+  const copulas = [...PERSON_COPULAS].sort((a, b) => b.length - a.length).map(escapeRegExp).join('|');
+  const copulasEnd = PERSON_COPULAS_END.map(escapeRegExp).join('|');
+  const byCopula = new RegExp(`(?<![가-힣])(?:${surname})[가-힣]{2}(?=${'(?:'}${copulas})|(?:${copulasEnd})(?![가-힣]))`, 'g');
+  while ((m = byCopula.exec(text)) !== null) {
+    const v = m[0];
+    if (PERSON_STOPWORDS.has(v) || PERSON_STOPWORDS.has(v.slice(0, 2))) continue;
+    if (NOUN_ENDINGS.has(v[v.length - 1])) continue;
+    out.push(det('PERSON', m.index, m.index + v.length, text, 'person-copula', 0.6, { uncertain: true }));
+  }
+
+  // ②-2 "저는 김민수이고", "담당자는 김민수이며", "이름: 김민수" — 소개하는 말 바로 뒤의 성명
+  const intro = PERSON_INTRO_WORDS.map((w) => escapeRegExp(w).replace(/ /g, '\\s?')).join('|');
+  const nameEnd = [...PERSON_COPULAS, ...PERSON_COPULAS_END, '예요', '님', '씨', ...PERSON_PARTICLES]
+    .sort((a, b) => b.length - a.length).map(escapeRegExp).join('|');
+  const byIntro = new RegExp(
+    `(?<=(?<![가-힣])(?:${intro})\\s*[:：]?\\s*)(?:${surname})[가-힣]{1,2}(?=(?:${nameEnd})|[\\s,.)!?。]|$)`,
+    'g',
+  );
+  while ((m = byIntro.exec(text)) !== null) {
+    if (PERSON_STOPWORDS.has(m[0]) || PERSON_STOPWORDS.has(m[0].slice(0, 2))) continue;
+    out.push(det('PERSON', m.index, m.index + m[0].length, text, 'person-intro', 0.8));
+  }
+
   // ③ "참석: 김철수, 박지영" 같은 이름 나열 — 콜론/쉼표 사이의 3음절 성명
   const list = new RegExp(`(?<=(?:참석자?|담당자?|작성자?|발표자?|연락처|수신|참조|from|to|cc)\\s*[:：]\\s*(?:[^\\n]*?[,，·]\\s*)?)(?:${surname})[가-힣]{2}(?![가-힣])`, 'gi');
   while ((m = list.exec(text)) !== null) {
@@ -400,7 +441,8 @@ function detectByDictionary(text, dictionary = {}) {
     const type = rawType.toUpperCase();
     for (const word of [...(words || [])].sort((a, b) => b.length - a.length)) {
       const w = String(word).trim();
-      for (const [s, e] of findAllOccurrences(text, w)) out.push(det(type, s, e, text, 'dictionary', 0.97));
+      // 사용자가 직접 지정한 단어는 어떤 규칙보다 우선한다 (예: URL 전체를 넣었는데 이메일 규칙이 일부만 가져가면 안 됨)
+      for (const [s, e] of findAllOccurrences(text, w)) out.push(det(type, s, e, text, 'dictionary', 1.0));
     }
   }
   return out;
@@ -484,6 +526,7 @@ export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [
     ...detectPersons(text),
     ...detectIntlOrgs(text),
     ...detectIntlPersons(text),
+    ...detectSecrets(text),
     ...nerToDetections(text, ner),
     ...detectByDictionary(text, dictionary),
   ].filter((d) => enabled.has(d.type) && !allowSet.has(d.value));

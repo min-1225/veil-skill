@@ -2,6 +2,7 @@
 // 원본: VeilNote backend/src/shared/tokenizer.js, leakGuard.js / frontend/src/lib/tokenizer.ts
 
 import { detect, findAllOccurrences, HIGH_RISK_TYPES, maskValue } from './detect.mjs';
+import { CREDENTIAL_URL_FRAGMENT } from './rules-secrets.mjs';
 
 export const TOKEN_RE = /\[([A-Z][A-Z0-9]*)_(\d+)\]/g;
 
@@ -91,6 +92,12 @@ export function checkLeak(veiledText, entries = [], allow = []) {
   const residualPatterns = detect(veiledText, { types: HIGH_RISK_TYPES })
     .filter((d) => !allowSet.has(d.value))
     .map((d) => ({ type: d.type, preview: maskValue(d.value) }));
+  //  (C) 접속 주소가 일부만 가려진 흔적: "postgresql://admin:비밀번호앞부분[EMAIL_1]..."
+  //      주소 전체가 가려졌다면 '://사용자:' 가 보일 수 없다.
+  CREDENTIAL_URL_FRAGMENT.lastIndex = 0;
+  for (const m of veiledText.matchAll(CREDENTIAL_URL_FRAGMENT)) {
+    residualPatterns.push({ type: 'SECRET', preview: `${maskValue(m[0])} (접속 주소 속 계정 정보가 일부만 가려짐)` });
+  }
   return {
     clean: residualOriginals.length === 0 && residualPatterns.length === 0,
     residualOriginals,

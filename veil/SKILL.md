@@ -107,7 +107,9 @@ VEIL --help
 
 ## 탐지 종류
 
-기본으로 켜짐: `RRN`(주민·외국인등록번호), `SSN`(미국), `PASSPORT`, `CARD`, `EMAIL`, `PHONE`, `ACCOUNT`(계좌·IBAN), `IP`(v4·v6), `ADDRESS`, `AMOUNT`(금액), `ORG`(회사·기관), `PERSON`(인명), `LOCATION`(지명, `--ner`에서만 나옴)
+기본으로 켜짐: `RRN`(주민·외국인등록번호), `SSN`(미국), `PASSPORT`, `SECRET`(비밀번호·API 키·토큰·계정 정보가 든 접속 주소), `EMPLOYEE_ID`(사번), `CARD`, `EMAIL`, `PHONE`, `ACCOUNT`(계좌·IBAN), `IP`(v4·v6), `ADDRESS`, `AMOUNT`(금액), `ORG`(회사·기관), `PERSON`(인명), `LOCATION`(지명, `--ner`에서만 나옴)
+
+`SECRET`은 형식이 정해진 키(OpenAI `sk-…`, Anthropic `sk-ant-…`, GitHub `ghp_…`, AWS `AKIA…`, Slack, Stripe, JWT, 개인 키 블록 등), `비밀번호:`·`password=` 뒤의 값, `postgresql://user:pass@host` 같은 접속 주소 전체를 잡는다. 사전(`--dict`)에 넣은 값은 어떤 규칙보다 우선한다.
 기본으로 꺼짐: `DATE`. 일정은 보통 작업에 필요해서 꺼 두었다. 필요하면 `--add-types DATE`로 켠다.
 금액이 작업에 꼭 필요하면(예: 예산 합계 계산) `--skip-types AMOUNT`로 뺄 수 있다. 무엇을 남길지는 사용자에게 확인한다.
 
@@ -116,7 +118,7 @@ VEIL --help
 | | 한국어 | 영어 | 일본어 | 중국어 | 그 밖의 언어 |
 |---|---|---|---|---|---|
 | 이메일·IP·카드(체크섬)·IBAN·국제전화(+국가번호)·외화 금액 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 인명 | 성씨+직함/조사, `참석:` 목록 | `Mr./Dr.` + 이름, `CEO` + 이름, `Attendees:` 목록 | `〇〇さん/様/部長` | `〇〇先生/女士/经理` | `--ner` |
+| 인명 | 성씨+직함/조사/`이고·이며·입니다`, `저는·담당자는·이름:` 뒤, `참석:` 목록 | `Mr./Dr.` + 이름, `CEO` + 이름, `Attendees:` 목록 | `〇〇さん/様/部長` | `〇〇先生/女士/经理` | `--ner` |
 | 회사명 | ㈜, 주식회사, ~전자, `경쟁사 OO` | `Inc.`, `Ltd.`, `GmbH`, `~Labs` | 株式会社, ㈱ | 有限公司, 集团 | `--ner` |
 | 주소 | 시·도·구·도로명 | 미국식 번지+거리, 영국 우편번호 | 〒, 都道府県 | 省·市·区·路·号 | `--ner`(지명) |
 | 신분번호·전화 | 주민번호, 010·02 | SSN, 북미 전화 | 090 휴대폰 | — | 여권번호(“passport” 등 뒤) |
