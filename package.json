@@ -1,0 +1,24 @@
+{
+  "name": "veil-skill",
+  "version": "0.1.0",
+  "description": "Mask sensitive data before the AI sees it, unmask it after. A Claude Code skill and a local CLI (KO/EN/JA/ZH).",
+  "type": "module",
+  "bin": {
+    "veil": "veil/scripts/veil.mjs"
+  },
+  "files": [
+    "veil/",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node veil/scripts/selftest.mjs -q"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["pii", "redaction", "masking", "anonymization", "privacy", "claude-code", "claude-skill", "korean"],
+  "repository": "github:min-1225/veil-skill",
+  "license": "MIT"
+}

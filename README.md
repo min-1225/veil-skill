@@ -148,21 +148,37 @@ rules only:  Sarah said Michael talked to Northwind about the Berlin office.
 
 ## Run it locally
 
-Everything the skill does is **run this Node script on your machine**. You can use it straight from a terminal without Claude, and it behaves exactly the same.
+Everything the skill does is **run this command on your machine**. You can use it straight from a terminal without Claude, and it behaves exactly the same.
+
+**Install (once)**
 
 ```bash
-node veil/scripts/veil.mjs detect notes.txt                      # preview (writes nothing)
-node veil/scripts/veil.mjs veil notes.txt                        # → notes.veiled.txt + notes.veilmap.json
-node veil/scripts/veil.mjs veil notes.txt --ner                  # + local NER model
-node veil/scripts/veil.mjs veil a.txt b.txt --map project.veilmap.json   # one map for many files
-node veil/scripts/veil.mjs unveil summary.md --map notes.veilmap.json    # restore
-node veil/scripts/veil.mjs check outgoing.md --map notes.veilmap.json    # leak check (exit 2 = leak)
-node veil/scripts/veil.mjs types                                 # list entity types
+npm install -g github:min-1225/veil-skill
 ```
 
-Options: `--dict dict.json`, `--allow "Sales,HQ"`, `--add-types DATE`, `--skip-types AMOUNT`, `--force`, `--loose`. Run `--help` for all.
+**Use: one command, `veil <file>`**
 
-To enable NER: `cd veil/scripts && npm install`.
+```bash
+veil notes.txt       # mask → notes.veiled.txt
+veil summary.md      # a file with tokens is restored automatically → summary.unveiled.md
+```
+
+- The token map is saved to `.veil/map.json` in the same folder and found automatically when restoring. No paths to type.
+- `.veil/` gets its own `.gitignore`, so it never ends up in git.
+- Files in the same folder share one map, so the same person gets the same token across files.
+
+**Common options**
+
+```bash
+veil notes.txt --skip-types AMOUNT      # keep amounts
+veil notes.txt --allow "Legal,HQ"       # keep these words
+veil notes.txt --dict dict.json         # always mask these words
+veil detect notes.txt                   # preview (writes nothing)
+veil check outgoing.md                  # leak check (exit 2 = leak)
+veil help                               # short help (all options: veil help --all)
+```
+
+Without installing, run `node veil/scripts/veil.mjs` from this repo instead of `veil`. To enable NER, run `cd veil/scripts && npm install` once.
 
 ## FAQ
 
@@ -179,7 +195,7 @@ It depends on what is being detected.
 **There are no accuracy numbers yet.** The 242 self-tests are regression tests that keep features from breaking; precision and recall have not been measured on an independent dataset that the rules were not written against. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
 
 **Where is the token map?**
-Next to your file as `*.veilmap.json`. It contains the originals, so don't share or commit it. This repo's `.gitignore` already excludes it.
+In `.veil/map.json` in the same folder as your file. It contains the originals, so don't share it. `.veil/` gets its own `.gitignore`, so it never ends up in git.
 
 **Does `--ner` send my text anywhere?**
 No. Transformers.js runs the model locally. The only network access is the one-time model download from Hugging Face.

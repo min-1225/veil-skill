@@ -148,21 +148,37 @@ flowchart LR
 
 ## 로컬에서 직접 실행
 
-스킬이 하는 일은 전부 아래 Node 스크립트를 **내 컴퓨터에서 실행**하는 것입니다. Claude 없이 터미널에서 그대로 써도 똑같이 동작해요.
+스킬이 하는 일은 전부 아래 명령을 **내 컴퓨터에서 실행**하는 것입니다. Claude 없이 터미널에서 써도 똑같이 동작해요.
+
+**설치 (한 번만)**
 
 ```bash
-node veil/scripts/veil.mjs detect 회의록.txt                      # 미리보기 (파일 안 만듦)
-node veil/scripts/veil.mjs veil 회의록.txt                        # → 회의록.veiled.txt + 회의록.veilmap.json
-node veil/scripts/veil.mjs veil report.txt --ner                  # + 로컬 NER 모델
-node veil/scripts/veil.mjs veil 1월.txt 2월.txt --map 프로젝트.veilmap.json   # 여러 파일, 대응표 하나
-node veil/scripts/veil.mjs unveil 요약.md --map 회의록.veilmap.json       # 되돌리기
-node veil/scripts/veil.mjs check 보낼파일.md --map 회의록.veilmap.json    # 유출 검사 (종료 코드 2 = 남음)
-node veil/scripts/veil.mjs types                                  # 탐지 종류 목록
+npm install -g github:min-1225/veil-skill
 ```
 
-옵션: `--dict dict.json`, `--allow "법무팀,본사"`, `--add-types DATE`, `--skip-types AMOUNT`, `--force`, `--loose`. 전체 목록은 `--help`.
+**사용: 명령은 `veil <파일>` 하나예요**
 
-NER을 쓰려면: `cd veil/scripts && npm install`
+```bash
+veil 회의록.txt      # 가리기 → 회의록.veiled.txt
+veil 요약.md         # 토큰이 든 파일을 주면 알아서 되돌리기 → 요약.unveiled.md
+```
+
+- 대응표는 같은 폴더의 `.veil/map.json`에 자동으로 저장되고, 되돌릴 때 알아서 찾아요. 경로를 적을 필요가 없어요.
+- `.veil/` 폴더에는 `.gitignore`가 자동으로 생겨서 git에 올라가지 않아요.
+- 같은 폴더의 파일은 대응표를 함께 써서, 파일이 달라도 같은 사람은 같은 토큰이에요.
+
+**자주 쓰는 옵션**
+
+```bash
+veil 회의록.txt --skip-types AMOUNT      # 금액은 남기기
+veil 회의록.txt --allow "법무팀,본사"      # 이 단어는 남기기
+veil 회의록.txt --dict 사전.json          # 이 단어는 꼭 가리기
+veil detect 회의록.txt                   # 미리보기 (파일을 만들지 않음)
+veil check 보낼파일.md                   # 원문이 남았는지 검사 (종료 코드 2 = 남음)
+veil help                               # 짧은 사용법 (모든 옵션은 veil help --all)
+```
+
+설치하지 않고 이 레포에서 바로 쓰려면 `veil` 대신 `node veil/scripts/veil.mjs`를 쓰면 돼요. NER을 쓰려면 `cd veil/scripts && npm install`을 한 번 실행하세요.
 
 ## 자주 묻는 질문
 
@@ -179,7 +195,7 @@ NER을 쓰려면: `cd veil/scripts && npm install`
 **정확도 수치는 아직 없습니다.** 자체 테스트(242개)는 기능이 깨지지 않는지 확인하는 회귀 테스트이고, 규칙을 만들 때 보지 않은 독립 평가셋으로 정밀도·재현율을 측정한 것은 아닙니다. 중요한 고유명사는 사전에 넣으세요. 사전은 어떤 규칙보다 먼저 적용됩니다. 정말 민감한 문서라면 가린 파일을 한 번 훑어보는 걸 권합니다.
 
 **대응표는 어디에 있나요?**
-원본 옆에 `*.veilmap.json`으로 생깁니다. 원문이 들어 있으니 공유하거나 커밋하지 마세요. 이 레포의 `.gitignore`에는 이미 빠져 있습니다.
+원본과 같은 폴더의 `.veil/map.json`에 생깁니다. 원문이 들어 있으니 공유하지 마세요. `.veil/` 폴더에는 `.gitignore`가 자동으로 생겨서 git에 올라가지 않아요.
 
 **`--ner`가 내 글을 어딘가로 보내나요?**
 아니요. 모델은 Transformers.js로 내 컴퓨터에서 돕니다. 네트워크는 처음 한 번 Hugging Face에서 모델을 받을 때만 씁니다.
