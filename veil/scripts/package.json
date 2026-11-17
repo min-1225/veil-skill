@@ -1,8 +1,8 @@
 {
-  "name": "maskforge-scripts",
+  "name": "veil-scripts",
   "private": true,
   "type": "module",
-  "description": "MaskForge skill scripts. Dependencies are only needed for the optional --ner mode.",
+  "description": "Veil skill scripts. Dependencies are only needed for the optional --ner mode.",
   "engines": { "node": ">=18" },
   "optionalDependencies": {
     "@huggingface/transformers": "4.3.2"

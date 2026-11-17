@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MaskForge CLI — 글 속 민감정보를 [TYPE_N] 토큰으로 가리고, 나중에 원문으로 되돌린다.
+// Veil CLI — 글 속 민감정보를 [TYPE_N] 토큰으로 가리고, 나중에 원문으로 되돌린다.
 //
 //   node veil.mjs detect <파일>            탐지만 해보기 (파일 안 씀)
 //   node veil.mjs veil   <파일...>         가린 파일 + 대응표 만들기
@@ -28,7 +28,7 @@ async function nerFor(text, opt) {
   }
 }
 
-const HELP = `MaskForge — 민감정보 가리기/되돌리기
+const HELP = `Veil — 민감정보 가리기/되돌리기
 
 사용법:
   node veil.mjs detect <파일> [옵션]          탐지 결과 미리보기 (파일을 만들지 않음)
@@ -219,7 +219,7 @@ async function cmdVeil(files, opt) {
   const mapExists = fs.existsSync(mapPath);
   const map = mapExists
     ? loadMap(mapPath)
-    : { maskforge: 1, warning: '이 파일에는 가리기 전 원문이 들어 있습니다. AI에게 보여주거나 공유하지 마세요.', files: [], entries: [] };
+    : { veil: 1, warning: '이 파일에는 가리기 전 원문이 들어 있습니다. AI에게 보여주거나 공유하지 마세요.', files: [], entries: [] };
 
   // 쓰기 전에 출력 경로를 모두 확인한다 (중간에 멈추면 대응표 없는 가린 파일이 남기 때문)
   for (const file of files) {
