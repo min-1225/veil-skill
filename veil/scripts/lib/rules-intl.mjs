@@ -219,7 +219,13 @@ export function detectIntlOrgs(text) {
 
 // ───────────── 인명 (영어·일본어·중국어) ─────────────
 
-const EN_TITLES = 'Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Sir|Dame|Madam|Mme|Mlle|Herr|Frau|Sr|Sra';
+// 중국 주요 성씨 (복성 먼저) — 인구 상위 약 100개
+const ZH_SURNAMES = [
+  '欧阳', '司马', '上官', '诸葛', '东方', '皇甫', '尉迟', '公孙', '慕容', '令狐',
+  ...'王李张刘陈杨黄赵吴周徐孙马朱胡郭何高林罗郑梁谢宋唐许韩冯邓曹彭曾肖田董袁潘于蒋蔡余杜叶程苏魏吕丁任沈姚卢姜崔钟谭陆汪范金石廖贾夏韦付方白邹孟熊秦邱江尹薛闫段雷侯龙史陶黎贺顾毛郝龚邵万钱严覃武戴莫孔向汤',
+].join('|');
+
+const EN_TITLES ='Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Sir|Dame|Madam|Mme|Mlle|Herr|Frau|Sr|Sra';
 const EN_NAME = "[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?";
 const EN_LIST_KEYS = 'Attendees?|Participants?|Present|Owner|Assignee|Author|Contact|From|To|CC|Bcc|Prepared by|Signed by|Reviewed by|Approved by|Interviewer|Interviewee|Candidate|Customer|Client|Speaker|Host|Reporter|Requester';
 const EN_NAME_STOP = new Set(['Team', 'All', 'Everyone', 'None', 'Customer', 'Client', 'Support', 'Sales', 'Marketing', 'Engineering', 'Product', 'Design', 'Finance', 'Legal', 'Hr', 'HR', 'Admin', 'Manager', 'Director', 'Unknown', 'TBD', 'Me', 'You']);
@@ -276,10 +282,11 @@ export function detectIntlPersons(text) {
   }
 
   // 중국어: 王伟先生 / 李娜女士 / 张经理 / 刘总
-  const zh = /(?<![一-龥])([一-龥]{1,3})(?=(?:先生|女士|小姐|经理|經理|总监|總監|老师|老師|教授|总|總|董事长|董事長))/g;
+  // 중국어는 띄어쓰기가 없어서 "请李娜女士" 에서 이름 시작을 알 수 없다 → 성씨로 시작점을 잡는다.
+  const zh = new RegExp(`(?:${ZH_SURNAMES})[一-龥]{0,2}(?=(?:先生|女士|小姐|经理|經理|总监|總監|老师|老師|教授|董事长|董事長|总|總))`, 'g');
   while ((m = zh.exec(text)) !== null) {
-    if (/^(?:各位|大家|客户|客戶|公司|总|總)$/.test(m[1])) continue;
-    out.push(det('PERSON', m.index, m.index + m[1].length, text, 'person-title', 0.7, { uncertain: m[1].length === 1 }));
+    if (/^(?:各位|大家|客户|客戶|公司)$/.test(m[0])) continue;
+    out.push(det('PERSON', m.index, m.index + m[0].length, text, 'person-title', 0.7, { uncertain: m[0].length === 1 }));
   }
 
   return out;

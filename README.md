@@ -171,7 +171,7 @@ Not if you give it a file path. The skill tells Claude to read only the masked c
 **How reliable is detection?**
 Structured data is caught with certainty: emails, phones, national IDs, passports and accounts by pattern; card numbers and IBANs verified by checksum (Luhn, mod 97); API keys by their prefixes (`sk-`, `ghp_`, `AKIA`…); connection strings masked whole, credentials included.
 Names and companies are found through Korean titles, particles and self-introductions (`김철수 팀장`, `저는 김민수이고`, `담당자는 …`) and English, Japanese and Chinese honorific rules. Once a value is found, Veil searches the whole document again so every later mention is masked too. After masking, the leak check verifies that no original value or high-risk pattern survived.
-It's validated on real-world document shapes (meeting notes, support logs, HR memos, English minutes), and 33 tests run in GitHub Actions on every push. For a proper noun that appears with no title or introduction at all, add one line to a dictionary file; dictionary entries outrank every rule.
+It's validated on real-world document shapes (meeting notes, support logs, HR memos, English minutes), and 200 tests run in GitHub Actions on every push. For a proper noun that appears with no title or introduction at all, add one line to a dictionary file; dictionary entries outrank every rule.
 
 **Where is the token map?**
 Next to your file as `*.veilmap.json`. It contains the originals, so don't share or commit it. This repo's `.gitignore` already excludes it.
@@ -182,7 +182,8 @@ No. Transformers.js runs the model locally. The only network access is the one-t
 ## Tests
 
 ```bash
-node veil/scripts/selftest.mjs          # 33 tests: detection, tokenizing, restoring, leak checks
+node veil/scripts/selftest.mjs          # 200 tests: detection in 4 languages, secrets, false positives, round trips, CLI
+node veil/scripts/selftest.mjs -q       # print failures only
 node veil/scripts/selftest.mjs --ner    # + real NER model
 ```
 

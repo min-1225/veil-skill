@@ -7,13 +7,14 @@ import { detect } from './lib/detect.mjs';
 import { checkLeak, unveil, veil } from './lib/tokenize.mjs';
 import { alignTokens } from './lib/ner.mjs';
 
+const QUIET = process.argv.includes('-q') || process.argv.includes('--quiet'); // -q: 실패만 출력
 let passed = 0;
 const failures = [];
 function test(name, fn) {
   try {
     fn();
     passed++;
-    console.log(`  ✓ ${name}`);
+    if (!QUIET) console.log(`  ✓ ${name}`);
   } catch (e) {
     failures.push(name);
     console.log(`  ✗ ${name}\n      ${e.message.split('\n').join('\n      ')}`);
@@ -260,6 +261,13 @@ test('유출 검사: 대응표 원문과 고위험 패턴 잔존을 잡는다', 
   assert.equal(leak.residualPatterns[0].type, 'PHONE');
   assert.ok(!JSON.stringify(leak).includes('9999'), '유출 리포트에 원문이 들어가면 안 됨');
 });
+
+// 표 기반 테스트 묶음 (tests/*.mjs) — 언어별 탐지, 비밀 정보, 오탐 방지, 토큰화, 명령줄 도구, 단위 함수
+const section = (name) => console.log(name);
+for (const suite of ['ko', 'intl', 'secrets', 'negatives', 'tokens', 'cli', 'units']) {
+  const mod = await import(`./tests/${suite}.mjs`);
+  await mod.default({ test, section });
+}
 
 // 실제 NER 모델 테스트 — `node selftest.mjs --ner` 일 때만 (npm install + 모델 다운로드 필요)
 if (process.argv.includes('--ner')) {

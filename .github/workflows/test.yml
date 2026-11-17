@@ -20,4 +20,4 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Self-test (rules, tokenizing, restoring, leak checks)
-        run: node veil/scripts/selftest.mjs
+        run: node veil/scripts/selftest.mjs -q
