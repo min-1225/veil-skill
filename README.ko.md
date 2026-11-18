@@ -208,9 +208,13 @@ node veil/scripts/selftest.mjs -q       # 실패한 것만 출력
 node veil/scripts/selftest.mjs --ner    # + 실제 NER 모델
 ```
 
-## 출처
+## 만든 사람
+
+**Veil은 [@min-1225](https://github.com/min-1225)가 만들고 관리합니다** (리드 개발자·메인테이너).
 
 Veil은 TRACEGATE 팀이 코드게이트 2026 AI 스타트업 해커톤에서 만든 개인정보 보호 회의록 에이전트 **VeilNote**에서 출발했습니다 ([팀 원본](https://github.com/TRACEGATE/hackathon_2026), [포트폴리오 미러](https://github.com/min-1225/Hackathon-CodeGate-2026)). 탐지·토큰화 엔진을 그곳에서 가져와 이 스킬에 맞게 확장했습니다.
+
+**TRACEGATE 팀원(공동 작업자):** [@jiyun14](https://github.com/jiyun14) · [@wyr6543](https://github.com/wyr6543) · [@pgr1212](https://github.com/pgr1212)
 
 ## 라이선스
 
