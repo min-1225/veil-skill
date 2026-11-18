@@ -19,6 +19,7 @@
     "node": ">=18"
   },
   "keywords": ["pii", "redaction", "masking", "anonymization", "privacy", "claude-code", "claude-skill", "korean"],
+  "author": "min-1225 (https://github.com/min-1225)",
   "repository": "github:min-1225/veil-skill",
   "license": "MIT"
 }
