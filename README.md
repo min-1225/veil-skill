@@ -214,7 +214,7 @@ node veil/scripts/selftest.mjs --ner    # + real NER model
 
 Veil grew out of **VeilNote**, a privacy-preserving meeting agent built by team TRACEGATE at the CodeGate 2026 AI startup hackathon ([team repo](https://github.com/TRACEGATE/hackathon_2026), [portfolio mirror](https://github.com/min-1225/Hackathon-CodeGate-2026)). The detection and tokenizer engine started there and was extended for this skill.
 
-**Team TRACEGATE (collaborators):** [@jiyun14](https://github.com/jiyun14) · [@wyr6543](https://github.com/wyr6543) · [@pgr1212](https://github.com/pgr1212)
+**Original VeilNote team (TRACEGATE):** [@jiyun14](https://github.com/jiyun14) · [@wyr6543](https://github.com/wyr6543) · [@pgr1212](https://github.com/pgr1212)
 
 ## License
 
