@@ -1,0 +1,6 @@
+# deploy.yaml
+region: us-east-1
+replicas: 3
+aws_secret_access_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+slack_token: xoxb-2841-99331-Ab7dKq0LmN3pRtYz
+image: registry.example.com/app:1.8.2

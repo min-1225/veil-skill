@@ -1,0 +1,5 @@
+# 운영 환경 설정
+NODE_ENV=production
+OPENAI_API_KEY=sk-proj-9fKq2LmZt7XwR4vB8nYp1HcD6sJ3aE0u
+DATABASE_URL=postgresql://svc_app:Tr8!vLp29@db.internal.example:5432/orders
+LOG_LEVEL=info

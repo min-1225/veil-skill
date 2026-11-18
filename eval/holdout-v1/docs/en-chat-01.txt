@@ -1,0 +1,3 @@
+sarah: did you push the fix?
+mike: yep, staging is green. prod after lunch
+sarah: cool, ping Jen when it's live
