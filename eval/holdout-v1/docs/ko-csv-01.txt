@@ -1,0 +1,4 @@
+이름,부서,휴대폰,이메일
+최유진,재무,010-3381-2290,yujin.choi@finco.kr
+황보민,총무,010-5527-0164,bomin.hb@finco.kr
+이서준,영업,010-8840-7713,seojun.lee@finco.kr

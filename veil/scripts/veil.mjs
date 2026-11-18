@@ -9,7 +9,9 @@
 // 대응표는 파일과 같은 폴더의 .veil/map.json 에 자동으로 보관되고, 되돌릴 때 알아서 찾는다.
 // 원문·대응표 내용은 화면에 찍지 않는다 (AI가 이 출력을 읽기 때문). --show 일 때만 원문을 표시한다.
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DEFAULT_TYPES, ENTITY_TYPES, maskValue } from './lib/detect.mjs';
 import { checkLeak, findPreexistingTokens, TOKEN_RE, unveil, veil } from './lib/tokenize.mjs';
@@ -157,40 +159,86 @@ function mapForMasking(file, opt) {
   return folderMapPath(file);
 }
 
-/** 되돌릴 때 쓸 대응표: 파일 속 토큰을 가장 많이 가진 대응표를 이 폴더와 상위 폴더에서 찾는다 */
+/**
+ * 되돌릴 때 쓸 대응표를 이 폴더와 상위 폴더에서 찾는다.
+ * - 프로젝트 경계(.git 이 있는 폴더)와 홈 폴더 위로는 올라가지 않는다. 다른 프로젝트의 대응표를 집어 오지 않도록.
+ * - 파일 속 토큰을 모두 아는 대응표를 먼저 고르고, 그중 파일과 가장 가까운 것을 쓴다.
+ * @returns {{ path: string, depth: number, hits: number, total: number, others: string[] } | null}
+ */
 function findMapForTokens(file, tokens) {
+  const home = path.resolve(os.homedir());
   const candidates = [];
   let dir = path.dirname(path.resolve(file));
   for (let depth = 0; depth < 8; depth++) {
-    candidates.push(path.join(dir, '.veil', 'map.json'));
+    candidates.push({ path: path.join(dir, '.veil', 'map.json'), depth });
     try {
-      for (const f of fs.readdirSync(dir)) if (f.endsWith('.veilmap.json')) candidates.push(path.join(dir, f));
+      for (const f of fs.readdirSync(dir)) if (f.endsWith('.veilmap.json')) candidates.push({ path: path.join(dir, f), depth });
     } catch { /* 읽을 수 없는 폴더는 건너뜀 */ }
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+    if (parent === dir || dir === home || fs.existsSync(path.join(dir, '.git'))) break;
     dir = parent;
   }
-  let best = null;
+  const matches = [];
   for (const c of candidates) {
-    if (!fs.existsSync(c)) continue;
+    if (!fs.existsSync(c.path)) continue;
     let data;
-    try { data = JSON.parse(fs.readFileSync(c, 'utf8')); } catch { continue; }
+    try { data = JSON.parse(fs.readFileSync(c.path, 'utf8')); } catch { continue; }
     const known = new Set((data.entries || []).map((e) => e.token));
     const hits = tokens.filter((t) => known.has(t)).length;
-    if (hits && (!best || hits > best.hits)) best = { path: c, hits };
+    if (hits) matches.push({ ...c, hits, total: tokens.length });
   }
-  return best?.path || null;
+  if (!matches.length) return null;
+  // 토큰을 모두 아는 대응표 > 더 많이 아는 대응표, 같으면 가까운 폴더
+  matches.sort((x, y) => (y.hits === y.total) - (x.hits === x.total) || y.hits - x.hits || x.depth - y.depth);
+  const [best, ...rest] = matches;
+  return { ...best, others: rest.filter((m) => m.hits === best.hits).map((m) => m.path) };
 }
 
+const newMapId = () => crypto.randomBytes(4).toString('hex');
+
+/**
+ * 대응표 저장: 본인만 읽을 수 있게(0600) 하고, 임시 파일에 다 쓴 뒤 바꿔치기한다.
+ * 쓰는 도중 끊겨도 기존 대응표가 반쯤 쓰인 채로 깨지지 않는다.
+ */
 function saveMap(mapPath, map) {
-  fs.mkdirSync(path.dirname(mapPath), { recursive: true });
+  fs.mkdirSync(path.dirname(mapPath), { recursive: true, mode: 0o700 });
   if (path.basename(path.dirname(mapPath)) === '.veil') {
     // .veil 폴더 전체를 git 에서 제외 (원문이 든 대응표가 실수로 커밋되지 않도록)
     const gi = path.join(path.dirname(mapPath), '.gitignore');
     if (!fs.existsSync(gi)) fs.writeFileSync(gi, '# Veil 대응표 — 원문이 들어 있어 커밋하지 않습니다\n*\n', 'utf8');
   }
+  map.id ||= newMapId();
   map.updatedAt = new Date().toISOString();
-  fs.writeFileSync(mapPath, JSON.stringify(map, null, 2), 'utf8');
+  const tmp = `${mapPath}.${process.pid}.${newMapId()}.tmp`;
+  try {
+    const fd = fs.openSync(tmp, 'w', 0o600);
+    try {
+      fs.writeFileSync(fd, JSON.stringify(map, null, 2), 'utf8');
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(tmp, mapPath);
+    fs.chmodSync(mapPath, 0o600); // 예전에 만든 대응표도 저장할 때 권한을 좁힌다
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    fail(`대응표를 저장하지 못했어요: ${mapPath} (${e.message})`);
+  }
+}
+
+/** 상위 폴더 대응표를 썼거나 후보가 여럿이면 알려 준다 */
+function warnMapChoice(found, mapPath) {
+  if (!found) return;
+  const map = loadMap(mapPath);
+  const sources = [...new Set(map.files.map((f) => f.source))];
+  if (found.depth > 0) {
+    console.log(`  ⚠ 상위 폴더의 대응표를 썼어요: ${rel(mapPath)}${map.id ? ` (ID ${map.id})` : ''}`);
+    if (sources.length) console.log(`    이 대응표로 가린 원본: ${sources.slice(0, 5).join(', ')}${sources.length > 5 ? ' …' : ''}`);
+    console.log('    다른 작업의 대응표라면 결과를 지우고 --map 으로 맞는 대응표를 지정하세요.');
+  }
+  if (found.others.length) {
+    console.log(`  ⚠ 같은 토큰을 가진 대응표가 더 있어요: ${found.others.map(rel).join(', ')} — 가장 가까운 것을 썼어요.`);
+  }
 }
 
 function buildOptions(opt) {
@@ -273,7 +321,7 @@ async function maskFiles(files, opt) {
   const mapExists = fs.existsSync(mapPath);
   const map = mapExists
     ? loadMap(mapPath)
-    : { veil: 1, warning: '이 파일에는 가리기 전 원문이 들어 있습니다. AI에게 보여주거나 공유하지 마세요.', files: [], entries: [] };
+    : { veil: 1, id: newMapId(), warning: '이 파일에는 가리기 전 원문이 들어 있습니다. AI에게 보여주거나 공유하지 마세요.', files: [], entries: [] };
 
   let leaked = false;
   let entries = map.entries;
@@ -315,7 +363,8 @@ function unmaskFiles(files, opt) {
   for (const file of files) {
     const { text } = readText(file);
     const tokens = [...new Set([...text.matchAll(TOKEN_RE)].map((m) => m[0]))];
-    const mapPath = opt.map || findMapForTokens(file, tokens);
+    const found = opt.map ? null : findMapForTokens(file, tokens);
+    const mapPath = opt.map || found?.path;
     if (!mapPath) fail(`${rel(file)} 의 토큰에 맞는 대응표를 찾지 못했어요. 가릴 때 만든 대응표를 --map 으로 알려 주세요.`);
     const r = unveil(text, loadMap(mapPath).entries, { loose: opt.loose });
     const outPath = opt.out || derivePath(file, 'unveiled');
@@ -323,6 +372,7 @@ function unmaskFiles(files, opt) {
     const total = Object.values(r.replaced).reduce((a, b) => a + b, 0);
     console.log(`✔ 되돌렸어요: ${rel(file)} → ${rel(outPath)}`);
     console.log(`  토큰 ${total}곳 복원${r.josaFixed ? ` · 조사 ${r.josaFixed}곳 고침` : ''} · 대응표 ${rel(mapPath)}`);
+    warnMapChoice(found, mapPath);
     const unknown = Object.keys(r.unknown);
     if (unknown.length) console.log(`  ⚠ 대응표에 없는 토큰: ${unknown.join(', ')} — 그대로 두었어요.`);
     const bare = Object.keys(r.bare);
@@ -348,7 +398,10 @@ async function autoFiles(files, opt) {
     const { text } = readText(f);
     const tokens = [...new Set([...text.matchAll(TOKEN_RE)].map((m) => m[0]))];
     if (tokens.length && (opt.map || findMapForTokens(f, tokens))) toUnmask.push(f);
-    else toMask.push(f);
+    else if (tokens.length) {
+      fail(`${rel(f)} 에 토큰(${tokens.slice(0, 3).join(', ')}${tokens.length > 3 ? ' …' : ''})이 있는데 맞는 대응표를 찾지 못했어요.\n` +
+        '  대응표는 이 폴더부터 프로젝트 폴더(.git)까지만 찾아요. 되돌리려면 --map 으로 대응표를 알려 주고, 그냥 가리려면 veil mask 를 쓰세요.');
+    } else toMask.push(f);
   }
   let code = 0;
   if (toMask.length) code = Math.max(code, await maskFiles(toMask, opt));
@@ -386,7 +439,7 @@ function cmdCheck(files, opt) {
   if (files.length !== 1) fail('check 는 파일 하나만 받아요.');
   const { text } = readText(files[0]);
   const tokens = [...new Set([...text.matchAll(TOKEN_RE)].map((m) => m[0]))];
-  const mapPath = opt.map || findMapForTokens(files[0], tokens) || (fs.existsSync(folderMapPath(files[0])) ? folderMapPath(files[0]) : null);
+  const mapPath = opt.map || findMapForTokens(files[0], tokens)?.path || (fs.existsSync(folderMapPath(files[0])) ? folderMapPath(files[0]) : null);
   const entries = mapPath ? loadMap(mapPath).entries : [];
   const leak = checkLeak(text, entries, buildOptions(opt).allow);
   console.log(`검사: ${rel(files[0])}${mapPath ? ` (대응표 ${rel(mapPath)} 대조)` : ' (패턴 검사만)'}`);

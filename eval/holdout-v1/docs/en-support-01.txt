@@ -1,0 +1,5 @@
+Ticket #TCK-55120
+Customer: Jonathan Reyes
+Phone: +1 (312) 555-0187
+Issue: charged twice on card ending 5555 5555 5555 4444. Customer also gave SSN 219-09-9999 for verification (should not have been collected).
+Resolution: refund issued, agent reminded of policy.

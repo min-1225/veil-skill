@@ -43,6 +43,31 @@ export default function ({ test, section }) {
       assert.equal(run(dir, path.join('out', 'a.md')).status, 0);
       assert.equal(read('out/a.unveiled.md'), '담당: 김철수\n');
     });
+    test('상위 폴더 대응표로 되돌리면 어느 대응표를 썼는지 경고한다', () => {
+      const r = run(dir, 'unveil', path.join('out', 'a.md'));
+      assert.equal(r.status, 0, r.stderr);
+      assert.match(r.stdout, /상위 폴더의 대응표를 썼어요/);
+      assert.match(r.stdout, /note\.txt/);
+    });
+    test('대응표는 ID를 갖고, 본인만 읽을 수 있게 저장되며, 임시 파일이 남지 않는다', () => {
+      const map = JSON.parse(read('.veil/map.json'));
+      assert.match(map.id, /^[0-9a-f]{8}$/);
+      if (process.platform !== 'win32') assert.equal(fs.statSync(path.join(dir, '.veil', 'map.json')).mode & 0o777, 0o600);
+      assert.deepEqual(fs.readdirSync(path.join(dir, '.veil')).filter((f) => f.endsWith('.tmp')), []);
+    });
+    test('다른 프로젝트(.git 경계) 밖의 대응표로는 되돌리지 않는다', () => {
+      const proj = path.join(dir, 'other-project');
+      fs.mkdirSync(path.join(proj, '.git'), { recursive: true });
+      fs.writeFileSync(path.join(proj, 'moved.md'), '연락처 [PHONE_1]\n', 'utf8');
+      const r = run(proj, 'unveil', 'moved.md');
+      assert.equal(r.status, 1, r.stdout);
+      assert.ok(!fs.existsSync(path.join(proj, 'moved.unveiled.md')));
+      const auto = run(proj, 'moved.md');
+      assert.equal(auto.status, 1, auto.stdout);
+      assert.match(auto.stderr + auto.stdout, /맞는 대응표를 찾지 못했어요/);
+      assert.ok(!fs.existsSync(path.join(proj, 'moved.veiled.md')), '토큰 파일을 다시 가리면 안 된다');
+      assert.equal(run(proj, 'unveil', 'moved.md', '--map', path.join('..', '.veil', 'map.json')).status, 0);
+    });
     test('다시 실행하면 같은 토큰으로 덮어쓰고, 같은 폴더의 다른 파일도 대응표를 이어 쓴다', () => {
       assert.equal(run(dir, 'note.txt').status, 0);
       fs.writeFileSync(path.join(dir, 'memo.txt'), '김철수 팀장과 박지영 대리 통화\n', 'utf8');

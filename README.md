@@ -192,10 +192,10 @@ It depends on what is being detected.
 - **Names and companies** rely on cues. In prose: titles, particles and self-introductions (`김철수 팀장`, `저는 김민수이고`). In CSV, tables and JSON: column names and keys (`이름`, `담당자`, `name`, `customer`). Names with no cue (`민수가 그러는데`), romanized Korean names in prose (`Kim Minsu sent…`) and unfamiliar company names can be missed.
 - Once a value is found, every later mention is masked too, and the leak check confirms no original value or high-risk pattern survived. It cannot catch values that were never detected in the first place.
 
-**There are no accuracy numbers yet.** The 242 self-tests are regression tests that keep features from breaking; precision and recall have not been measured on an independent dataset that the rules were not written against. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
+**Measured on a small held-out set.** On [`eval/holdout-v1`](eval/holdout-v1) (36 documents, 129 labeled entities, never used to tune rules), rules alone mask **72.9%** of sensitive values (precision 92%, lenient). Fixed-format data (emails, cards, national IDs, secrets, IPs) was all caught; names without cues were the main gap (person recall 55%). In other words, roughly **1 in 4 sensitive values got through** in that set. It is small and was written with AI help in the same repo, so treat the numbers as a rough guide, not a guarantee. The 251 self-tests are regression tests, not accuracy measurements. Put important proper nouns in a dictionary file (dictionary entries outrank every rule), and skim the masked file for truly sensitive documents.
 
 **Where is the token map?**
-In `.veil/map.json` in the same folder as your file. It contains the originals, so don't share it. `.veil/` gets its own `.gitignore`, so it never ends up in git.
+In `.veil/map.json` in the same folder as your file. It contains the originals, so don't share it. `.veil/` gets its own `.gitignore`, so it never ends up in git. It is saved readable by you only (0600 on macOS/Linux) and written atomically, so an interrupted run can't leave a half-written map. When restoring, Veil looks in the file's folder and its parents but stops at the project root (a folder with `.git`) or your home folder, and warns you whenever it uses a map from a parent folder.
 
 **Does `--ner` send my text anywhere?**
 No. Transformers.js runs the model locally. The only network access is the one-time model download from Hugging Face.
@@ -203,9 +203,10 @@ No. Transformers.js runs the model locally. The only network access is the one-t
 ## Tests
 
 ```bash
-node veil/scripts/selftest.mjs          # 242 tests: detection in 4 languages, secrets, tables/data, false positives, round trips, CLI
+node veil/scripts/selftest.mjs          # 251 tests: detection in 4 languages, secrets, tables/data, false positives, round trips, CLI
 node veil/scripts/selftest.mjs -q       # print failures only
 node veil/scripts/selftest.mjs --ner    # + real NER model
+node veil/scripts/eval.mjs eval/holdout-v1   # precision / recall on the held-out set
 ```
 
 ## Maintainer & team

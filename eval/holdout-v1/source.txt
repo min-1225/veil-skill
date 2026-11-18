@@ -1,0 +1,218 @@
+# Veil 독립 평가셋 holdout-v1 원본 (주석 표기본)
+# 표기: ⟦TYPE:값⟧ 이 정답 개체. build.mjs 가 표기를 지운 문서와 gold.jsonl 을 만든다.
+# 규칙: PERSON 은 직함·호칭·조사를 뺀 이름만, ORG 는 ㈜/(주)를 뺀 이름(영문은 Inc./Corp. 포함),
+#       AMOUNT 는 통화 단위 포함, ADDRESS 는 주소 전체. 날짜와 단독 도시명은 표기하지 않는다.
+#       SECRET·ACCOUNT 는 값만 (키 이름 DB_PASSWORD=, 은행명은 민감정보가 아니므로 제외), 株式会社도 ㈜처럼 제외.
+# 이 평가셋은 규칙 수정에 쓰지 않는다. 틀린 사례를 보고 규칙을 고치면 이 평가셋의 수치는 더 이상 독립 평가가 아니다.
+
+=== ko-meeting-01
+주간 영업 회의 (11/3)
+참석: ⟦PERSON:윤가람⟧, ⟦PERSON:서도현⟧, ⟦PERSON:임채원⟧
+- ⟦ORG:누리솔루션⟧ 갱신 계약은 ⟦AMOUNT:4,800만원⟧으로 잠정 합의.
+- ⟦PERSON:도현⟧ 님이 다음 주까지 견적서 수정본 공유.
+- ⟦PERSON:채원⟧ 씨는 법무 검토 일정 확인 후 회신 예정.
+다음 회의는 목요일 오전.
+
+=== ko-meeting-02
+[킥오프 회의록]
+고객사: ⟦ORG:한결모빌리티⟧ / 담당 ⟦PERSON:노승우⟧ 과장 (⟦PHONE:010-4417-2093⟧)
+우리 쪽: ⟦PERSON:강민지⟧ PM, ⟦PERSON:오태윤⟧ 개발리드
+예산은 총 ⟦AMOUNT:1억 2천만 원⟧, 1차 중도금 ⟦AMOUNT:3,600만 원⟧.
+⟦PERSON:승우⟧ 과장님 요청: 12월 첫째 주 데모.
+
+=== ko-support-01
+상담번호 ⟦EMPLOYEE_ID:CS-2026-48812⟧
+고객명: ⟦PERSON:정하은⟧
+연락처: ⟦PHONE:010-9182-3307⟧ / 이메일 ⟦EMAIL:haeun.j@example.co.kr⟧
+문의: 지난달 결제된 ⟦AMOUNT:89,000원⟧이 두 번 청구됨. 카드 ⟦CARD:4012-8888-8888-1881⟧ 확인 요청.
+처리: 중복 결제 취소, 3영업일 내 환불 안내.
+
+=== ko-support-02
+고객님이 전화로 본인 확인을 위해 주민번호 앞자리와 뒷자리를 불러주심: ⟦RRN:850412-2134567⟧
+상담원 메모: 등록 주소가 ⟦ADDRESS:서울특별시 마포구 월드컵북로 396⟧ 으로 되어 있어 변경 요청 접수함.
+새 주소는 ⟦ADDRESS:경기도 성남시 분당구 판교역로 235⟧.
+
+=== ko-hr-01
+제목: 신규 입사자 안내
+이번 달 입사자는 ⟦PERSON:한예린⟧ 님(사번 ⟦EMPLOYEE_ID:E-20871⟧)입니다.
+급여 계좌는 ⟦ACCOUNT:110-482-551209⟧ (신한)로 등록했습니다.
+연봉은 ⟦AMOUNT:4,200만원⟧이며 수습 기간 3개월입니다.
+담당자: 인사팀 ⟦PERSON:조윤서⟧ (⟦EMAIL:yoonseo.cho@hrteam.kr⟧)
+
+=== ko-hr-02
+퇴사 면담 정리
+면담자: ⟦PERSON:김도윤⟧ 팀장 / 대상자: ⟦PERSON:박서진⟧ 사원
+⟦PERSON:서진⟧ 씨는 이직 사유로 성장 기회 부족을 이야기했다. 팀장으로서 업무 분배를 다시 볼 필요가 있음.
+비고: 잔여 연차 6일은 정산 예정.
+
+=== ko-chat-01
+[오후 2:14] ⟦PERSON:지수⟧: 혹시 어제 보낸 파일 받았어?
+[오후 2:15] ⟦PERSON:현우⟧: 응 받았어. 근데 수정본이 맞나?
+[오후 2:15] ⟦PERSON:지수⟧: 맞아, 표 숫자만 바뀜
+[오후 2:17] ⟦PERSON:현우⟧: 오케이 내일 아침에 ⟦PERSON:민재⟧한테도 넘길게
+
+=== ko-chat-02
+엄마 내일 병원 예약 10시야. 주차는 지하 2층에 하면 돼.
+그리고 아빠 번호 바뀌었대 ⟦PHONE:010-7720-1458⟧ 로 저장해 둬.
+강아지 사료는 내가 주문해 놨어.
+
+=== ko-contract-01
+용역 계약 주요 조건 메모
+갑: ⟦ORG:미래온에너지⟧ (대표이사 ⟦PERSON:문재혁⟧)
+을: ⟦ORG:별빛소프트⟧
+계약금액: ⟦AMOUNT:금 일억오천만원정⟧ (부가세 별도)
+지체상금: 일 0.1%
+대금 지급 계좌: 국민은행 ⟦ACCOUNT:004-21-0412-883⟧
+
+=== ko-contract-02
+NDA 체결 현황
+- ⟦ORG:하늘바이오⟧: 체결 완료 (담당 ⟦PERSON:엄지훈⟧ 상무)
+- ⟦ORG:그린웨이브⟧: 법무 검토 중
+- ⟦ORG:온새미로⟧: 미회신, 다음 주 재요청
+비고: ⟦ORG:하늘바이오⟧ 쪽 요청으로 비밀유지 기간 3년 → 5년.
+
+=== ko-incident-01
+장애 보고서
+발생 서버: ⟦IP:10.24.8.117⟧, 대체 서버: ⟦IP:10.24.8.118⟧
+원인: 배포 스크립트에 운영 DB 비밀번호가 평문으로 들어가 있었음 → DB_PASSWORD=⟦SECRET:Qw3rty!2026prod⟧
+조치: 비밀번호 교체, 담당자 ⟦PERSON:신동혁⟧ 대리가 저장소 이력 정리.
+
+=== ko-incident-02
+보안 점검 결과 공유드립니다.
+외부 접속 로그에서 ⟦IP:203.0.113.45⟧ 가 반복적으로 로그인을 시도했습니다.
+계정 ⟦EMAIL:admin@corp-intra.kr⟧ 은 잠금 처리했습니다.
+점검자: 정보보호팀 ⟦PERSON:유나래⟧
+
+=== ko-csv-01
+이름,부서,휴대폰,이메일
+⟦PERSON:최유진⟧,재무,⟦PHONE:010-3381-2290⟧,⟦EMAIL:yujin.choi@finco.kr⟧
+⟦PERSON:황보민⟧,총무,⟦PHONE:010-5527-0164⟧,⟦EMAIL:bomin.hb@finco.kr⟧
+⟦PERSON:이서준⟧,영업,⟦PHONE:010-8840-7713⟧,⟦EMAIL:seojun.lee@finco.kr⟧
+
+=== ko-csv-02
+상품코드,상품명,재고,단가
+A-100,무선 키보드,32,39000
+A-101,무선 마우스,58,21000
+B-220,모니터 받침대,12,45000
+
+=== ko-table-01
+| 담당자 | 업무 | 마감 |
+|---|---|---|
+| ⟦PERSON:권혜원⟧ | 보도자료 초안 | 11/20 |
+| ⟦PERSON:남궁현⟧ | 행사장 섭외 | 11/24 |
+| ⟦PERSON:차예준⟧ | 예산 정리 | 11/27 |
+
+=== ko-json-01
+{
+  "customer": "⟦PERSON:배수아⟧",
+  "phone": "⟦PHONE:02-3149-7720⟧",
+  "address": "⟦ADDRESS:부산광역시 해운대구 센텀중앙로 79⟧",
+  "plan": "premium",
+  "memo": "배송 전 연락 요망"
+}
+
+=== ko-json-02
+{
+  "name": "veil-dashboard",
+  "version": "2.3.1",
+  "private": true,
+  "scripts": { "dev": "vite", "build": "vite build" }
+}
+
+=== ko-env-01
+# 운영 환경 설정
+NODE_ENV=production
+OPENAI_API_KEY=⟦SECRET:sk-proj-9fKq2LmZt7XwR4vB8nYp1HcD6sJ3aE0u⟧
+DATABASE_URL=⟦SECRET:postgresql://svc_app:Tr8!vLp29@db.internal.example:5432/orders⟧
+LOG_LEVEL=info
+
+=== ko-email-01
+안녕하세요 ⟦PERSON:임하준⟧ 대리님,
+지난번 말씀하신 견적 건 회신드립니다. 총액은 ⟦AMOUNT:2,350,000원⟧입니다.
+궁금하신 점은 ⟦PHONE:031-708-4421⟧ 또는 이 메일로 연락 주세요.
+⟦ORG:다온테크⟧ ⟦PERSON:송지아⟧ 드림
+
+=== ko-email-02
+팀장님, 제가 금요일에 반차 써도 될까요? 병원 진료가 있어서요.
+오전 중 보고서는 목요일 저녁까지 올려두겠습니다.
+
+=== ko-misc-01
+주말에 한라산 다녀왔는데 정상 근처는 벌써 눈이 쌓였더라.
+내려와서 고기국수 먹고, 오렌지 한 박스 사서 왔어.
+정수기 필터는 다음 주에 교체 기사님이 오신대.
+
+=== ko-misc-02
+고양이가 요즘 밥을 잘 안 먹어서 동물병원 다녀옴. 의사 선생님이 사료를 바꿔보라고 하심.
+손가락을 살짝 물렸는데 큰 상처는 아니야.
+
+=== ko-misc-03
+⟦PERSON:민수⟧가 그러는데 다음 달에 팀이 바뀐대. ⟦PERSON:지영⟧이는 그대로 남고.
+
+=== en-email-01
+Hi ⟦PERSON:Rachel⟧,
+Following up on our call with ⟦ORG:Brightline Logistics Inc.⟧ yesterday. ⟦PERSON:Marcus Lee⟧ confirmed they can do ⟦AMOUNT:$185,000⟧ for the first year.
+Can you send the revised SOW to ⟦EMAIL:marcus.lee@brightline-logistics.com⟧ by Friday?
+Thanks,
+⟦PERSON:Dana Whitfield⟧
+
+=== en-email-02
+Team, quick reminder that the offsite is next Thursday. Lunch is covered.
+Please submit expense reports through the portal, not by email.
+
+=== en-support-01
+Ticket #⟦EMPLOYEE_ID:TCK-55120⟧
+Customer: ⟦PERSON:Jonathan Reyes⟧
+Phone: ⟦PHONE:+1 (312) 555-0187⟧
+Issue: charged twice on card ending ⟦CARD:5555 5555 5555 4444⟧. Customer also gave SSN ⟦SSN:219-09-9999⟧ for verification (should not have been collected).
+Resolution: refund issued, agent reminded of policy.
+
+=== en-meeting-01
+Attendees: ⟦PERSON:Priya Natarajan⟧, ⟦PERSON:Tom Becker⟧, ⟦PERSON:Ana Souza⟧
+Notes:
+- ⟦PERSON:Priya⟧ walked through Q4 pipeline; ⟦ORG:Northwind Traders⟧ deal slipped to January.
+- ⟦PERSON:Tom⟧ will draft the pricing memo.
+- Budget ask: ⟦AMOUNT:€42,500⟧ for the pilot.
+
+=== en-hr-01
+Employee: ⟦PERSON:Kevin O'Brien⟧ (ID ⟦EMPLOYEE_ID:EMP-30418⟧)
+Home address: ⟦ADDRESS:742 Evergreen Terrace, Springfield, IL 62704⟧
+Direct deposit: ⟦ACCOUNT:GB82 WEST 1234 5698 7654 32⟧
+Passport on file: ⟦PASSPORT:K04839215⟧
+
+=== en-chat-01
+⟦PERSON:sarah⟧: did you push the fix?
+⟦PERSON:mike⟧: yep, staging is green. prod after lunch
+⟦PERSON:sarah⟧: cool, ping ⟦PERSON:Jen⟧ when it's live
+
+=== en-config-01
+# deploy.yaml
+region: us-east-1
+replicas: 3
+aws_secret_access_key: ⟦SECRET:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY⟧
+slack_token: ⟦SECRET:xoxb-2841-99331-Ab7dKq0LmN3pRtYz⟧
+image: registry.example.com/app:1.8.2
+
+=== en-misc-01
+The quarterly report shows revenue up 12% year over year. Marketing spend stayed flat.
+We expect the new onboarding flow to cut churn in the first 30 days.
+
+=== en-contract-01
+This Agreement is entered into by ⟦ORG:Cobalt Ridge Partners LLC⟧ and ⟦ORG:Meridian Health Systems⟧.
+Fees: ⟦AMOUNT:USD 72,000⟧ payable within 30 days to IBAN ⟦ACCOUNT:NL91 ABNA 0417 1643 00⟧.
+Signed: ⟦PERSON:Eleanor Grant⟧, General Counsel
+
+=== ja-memo-01
+⟦PERSON:佐藤⟧さんから連絡がありました。株式会社⟦ORG:ミナト精機⟧の見積は⟦AMOUNT:350万円⟧です。
+折り返しは⟦PHONE:03-5412-8890⟧までお願いします。
+
+=== zh-memo-01
+⟦PERSON:李娜⟧女士下周去⟦ORG:华信科技有限公司⟧开会，报价是⟦AMOUNT:12万元⟧。
+联系电话：⟦PHONE:138-1234-5678⟧
+
+=== mixed-01
+회의 메모: ⟦ORG:Acme Robotics⟧ 쪽 담당자 ⟦PERSON:James Park⟧이 서울에 옴. 통역은 ⟦PERSON:이수빈⟧ 씨가 맡기로.
+⟦PERSON:James⟧ 번호 ⟦PHONE:+82 10-2231-9048⟧, 숙소는 호텔 측에서 정리.
+
+=== fullwidth-01
+고객이 보낸 문자 그대로 붙여넣음: 연락처 ⟦PHONE:０１０－６６１２－３０９５⟧ 로 연락 바랍니다
+생년월일 포함 번호 ⟦RRN:９２０７１５－１２３４５６７⟧

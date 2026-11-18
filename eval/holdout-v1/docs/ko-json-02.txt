@@ -1,0 +1,6 @@
+{
+  "name": "veil-dashboard",
+  "version": "2.3.1",
+  "private": true,
+  "scripts": { "dev": "vite", "build": "vite build" }
+}

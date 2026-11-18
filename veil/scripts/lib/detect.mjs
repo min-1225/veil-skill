@@ -556,7 +556,11 @@ function propagate(text, detections) {
  *   allow: 절대 가리지 않을 단어 목록 (오탐 제외용)
  *   ner: ner.mjs 의 runNer() 가 미리 계산한 개체 목록 (선택). 규칙과 똑같이 합쳐진다.
  */
-export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [], ner = [] } = {}) {
+export function detect(original, { types = DEFAULT_TYPES, dictionary: rawDictionary = {}, allow: rawAllow = [], ner = [] } = {}) {
+  // 전각 숫자·영문·기호(０１０－１２３４)를 반각으로 접어서 탐지한다. 글자 수가 그대로라 위치는 원문과 같다.
+  const text = foldWidth(original);
+  const dictionary = Object.fromEntries(Object.entries(rawDictionary).map(([t, words]) => [t, words.map(foldWidth)]));
+  const allow = rawAllow.map(foldWidth);
   const enabled = new Set([...types.map((t) => t.toUpperCase()), ...Object.keys(dictionary).map((t) => t.toUpperCase())]);
   const allowSet = new Set(allow.map((a) => a.trim()).filter(Boolean));
 
@@ -578,7 +582,21 @@ export function detect(text, { types = DEFAULT_TYPES, dictionary = {}, allow = [
   const notInAllowed = (d) => !allowRanges.some(([s, e]) => d.start >= s && d.end <= e);
 
   const resolved = resolveOverlaps(raw.filter(notInAllowed));
-  return propagate(text, resolved).filter(notInAllowed).filter((d) => !allowSet.has(d.value));
+  const found = propagate(text, resolved).filter(notInAllowed).filter((d) => !allowSet.has(d.value));
+  if (text === original) return found;
+  // 값은 원문 글자 그대로 돌려준다 (가린 뒤 되돌릴 때 전각이 그대로 살아나도록)
+  return found.map((d) => ({ ...d, value: original.slice(d.start, d.end) }));
+}
+
+/**
+ * 전각 영문·숫자·기호(U+FF01–FF5E)와 전각 공백, 여러 가지 하이픈을 반각으로 바꾼다.
+ * 한 글자를 한 글자로만 바꾸므로 문자열 길이와 위치가 변하지 않는다.
+ */
+export function foldWidth(s) {
+  return s
+    .replace(/[\uFF01-\uFF5E]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/\u3000/g, ' ')
+    .replace(/[\u2010-\u2015\u2212\uFE63]/g, '-');
 }
 
 /**
